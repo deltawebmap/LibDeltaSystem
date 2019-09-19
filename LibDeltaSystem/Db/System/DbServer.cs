@@ -1,0 +1,227 @@
+﻿using LibDeltaSystem.Db.Content;
+using MongoDB.Driver;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace LibDeltaSystem.Db.System
+{
+    public class DbServer : DbBaseSystem
+    {
+        /// <summary>
+        /// Name shown in the UI
+        /// </summary>
+        public string display_name { get; set; }
+
+        /// <summary>
+        /// URL to a server icon.
+        /// </summary>
+        public string image_url { get; set; }
+
+        /// <summary>
+        /// Has a custom icon
+        /// </summary>
+        public bool has_custom_image { get; set; }
+
+        /// <summary>
+        /// ID of the owner of the server
+        /// </summary>
+        public string owner_uid { get; set; }
+
+        /// <summary>
+        /// Creds checked to verify the connection between the slave server.
+        /// </summary>
+        public byte[] server_creds { get; set; }
+
+        /// <summary>
+        /// The latest map the server was on.
+        /// </summary>
+        public string latest_server_map { get; set; }
+
+        /// <summary>
+        /// The friendly name of the latest server map
+        /// </summary>
+        public string latest_server_map_name { get; set; }
+
+        /// <summary>
+        /// Latest time of the Ark server
+        /// </summary>
+        public float latest_server_time { get; set; }
+
+        /// <summary>
+        /// If we have the above four values
+        /// </summary>
+        public bool has_server_report { get; set; }
+
+        /// <summary>
+        /// Is published and public
+        /// </summary>
+        public bool is_published { get; set; }
+
+        /// <summary>
+        /// If this managed by a provider
+        /// </summary>
+        public bool is_managed { get; set; }
+
+        /// <summary>
+        /// The ID of the provider managing this server.
+        /// </summary>
+        public string provider_id { get; set; }
+
+        /// <summary>
+        /// The linked provider server ID
+        /// </summary>
+        public string provider_server_id { get; set; }
+
+        /// <summary>
+        /// The linked cluster ID. Can be null if this is not in a cluster.
+        /// </summary>
+        public string cluster_id { get; set; }
+
+        /// <summary>
+        /// The revision ID to use when searching for content.
+        /// </summary>
+        public uint revision_id { get; set; }
+
+        /// <summary>
+        /// Updates this in the database
+        /// </summary>
+        public void Update()
+        {
+            UpdateAsync().GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// Updates this in the database async
+        /// </summary>
+        /// <returns></returns>
+        public async Task UpdateAsync()
+        {
+            var filterBuilder = Builders<DbServer>.Filter;
+            var filter = filterBuilder.Eq("_id", _id);
+            await conn.system_servers.FindOneAndReplaceAsync(filter, this);
+        }
+
+        /// <summary>
+        /// Deletes this in the database async
+        /// </summary>
+        /// <returns></returns>
+        public async Task DeleteAsync()
+        {
+            var filterBuilder = Builders<DbServer>.Filter;
+            var filter = filterBuilder.Eq("_id", _id);
+            await conn.system_servers.FindOneAndDeleteAsync(filter);
+        }
+
+        /// <summary>
+        /// Returns 
+        /// </summary>
+        /// <param name="steamId"></param>
+        /// <returns></returns>
+        public async Task<DbPlayerProfile> GetPlayerProfileBySteamIdAsync(string steamId)
+        {
+            var filterBuilder = Builders<DbPlayerProfile>.Filter;
+            var filter = filterBuilder.Eq("server_id", _id);
+            var results = await conn.content_player_profiles.FindAsync(filter);
+            return await results.FirstOrDefaultAsync();
+        }
+
+        /// <summary>
+        /// Returns tribe data from it's ID
+        /// </summary>
+        /// <param name="steamId"></param>
+        /// <returns></returns>
+        public async Task<DbTribe> GetTribeAsync(int tribeId)
+        {
+            return await conn.GetTribeByTribeIdAsync(id, tribeId);
+        }
+
+        /// <summary>
+        /// Uses your Steam ID to try and get your tribe ID
+        /// </summary>
+        /// <param name="steamId"></param>
+        /// <returns></returns>
+        public async Task<int?> TryGetTribeIdAsync(string steamId)
+        {
+            var filterBuilder = Builders<DbPlayerProfile>.Filter;
+            var filter = filterBuilder.Eq("server_id", id) & filterBuilder.Eq("steam_id", steamId);
+            var results = await conn.content_player_profiles.FindAsync(filter);
+            var r = await results.FirstOrDefaultAsync();
+            if (r == null)
+                return null;
+            else
+                return r.tribe_id;
+        }
+
+        /// <summary>
+        /// Returns 
+        /// </summary>
+        /// <param name="steamId"></param>
+        /// <returns></returns>
+        public async Task<List<DbPlayerProfile>> GetPlayerProfilesByTribeAsync(int tribeId)
+        {
+            var filterBuilder = Builders<DbPlayerProfile>.Filter;
+            var filter = filterBuilder.Eq("server_id", id) & filterBuilder.Eq("tribe_id", tribeId);
+            var results = await conn.content_player_profiles.FindAsync(filter);
+            return await results.ToListAsync();
+        }
+
+        /// <summary>
+        /// Returns 
+        /// </summary>
+        /// <param name="steamId"></param>
+        /// <returns></returns>
+        public async Task<List<DbUser>> GetUsersByTribeAsync(int tribeId)
+        {
+            //Get all player profiles
+            var profiles = await GetPlayerProfilesByTribeAsync(tribeId);
+
+            //Now, get all DbUsers
+            List<DbUser> users = new List<DbUser>();
+            foreach(var p in profiles)
+            {
+                var u = await conn.GetUserBySteamIdAsync(p.steam_id);
+                if (u != null)
+                    users.Add(u);
+            }
+
+            return users;
+        }
+
+        /// <summary>
+        /// Returns a placeholder icon
+        /// </summary>
+        /// <param name="display_name"></param>
+        /// <returns></returns>
+        public static string StaticGetPlaceholderIcon(string display_name)
+        {
+            //Find letters
+            string[] words = display_name.Split(' ');
+            char[] charset = "qwertyuiopasdfghjklzxcvbnm1234567890QWERTYUIOPASDFGHJKLZXCVBNM".ToCharArray();
+            string output = "";
+            for (int i = 0; i < words.Length; i++)
+            {
+                if (output.Length >= 2)
+                    break;
+                if (words[i].Length > 1)
+                {
+                    char c = words[i][0];
+                    if (charset.Contains(c))
+                    {
+                        string sc = new string(new char[] { c });
+                        if (output.Length == 0)
+                            sc = sc.ToUpper();
+                        else
+                            sc = sc.ToLower();
+                        output += sc;
+                    }
+                }
+            }
+
+            //Now, return URL
+            return "https://icon-assets.deltamap.net/legacy/placeholder_server_images/" + output + ".png";
+        }
+    }
+}
