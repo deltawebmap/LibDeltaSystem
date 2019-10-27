@@ -1,6 +1,7 @@
 ﻿using LibDeltaSystem.Entities.ArkEntries.Dinosaur;
 using LibDeltaSystem.Entities.PrivateNet.Packages;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Bson;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -13,6 +14,11 @@ namespace LibDeltaSystem
     public class DeltaPrimalDataPackage
     {
         public List<DinosaurEntry> dino_entries;
+
+        public DeltaPrimalDataPackage()
+        {
+            dino_entries = new List<DinosaurEntry>();
+        }
 
         /// <summary>
         /// Loads all content from a ZIP file stream
@@ -27,7 +33,7 @@ namespace LibDeltaSystem
             //Open ZIP stream on this
             using (ZipArchive zip = new ZipArchive(s, ZipArchiveMode.Read))
             {
-                package.dino_entries = await ZipHelper<List<DinosaurEntry>>(zip.GetEntry("dinos.json"));
+                package.dino_entries = await ZipHelper<List<DinosaurEntry>>(zip.GetEntry("dinos.bson"));
             }
 
             return package;
@@ -37,14 +43,12 @@ namespace LibDeltaSystem
         {
             //Get entry stream
             T output;
-            using(Stream s = entry.Open())
+            using (Stream s = entry.Open())
+            using (BsonReader reader = new BsonReader(s))
             {
-                //Read string content
-                byte[] buf = new byte[entry.Length];
-                await s.ReadAsync(buf);
-
-                //Decode as text and JSON
-                output = JsonConvert.DeserializeObject<T>(Encoding.UTF8.GetString(buf));
+                JsonSerializer serializer = new JsonSerializer();
+                reader.ReadRootValueAsArray = true; //Thanks, James! https://stackoverflow.com/questions/16910369/bson-array-deserialization-with-json-net
+                output = serializer.Deserialize<T>(reader);
             }
             return output;
         }

@@ -25,6 +25,8 @@ namespace LibDeltaSystem
         {
             this.index_path = index_path;
             client = new HttpClient();
+            index = new TimeCachedFile<PackageIndex>();
+            mods = new Dictionary<string, HashCachedFile<DeltaPrimalDataPackage>>();
         }
 
         /// <summary>
@@ -77,18 +79,12 @@ namespace LibDeltaSystem
         abstract class BaseCachedFile<T>
         {
             private Task<T> fetch;
-            private T data;
-            private bool ready;
             
             public async Task<T> GetFile(HttpClient hc, string url, GetCachedFile<T> process)
             {
                 //Check if the task has started
                 if (fetch == null)
                     fetch = process(hc, url);
-
-                //Check if we have our object
-                if(ready)
-                    return data;
 
                 //Wait for it to be completed
                 if (!fetch.IsCompleted)
@@ -97,9 +93,7 @@ namespace LibDeltaSystem
                 //Handle completion state
                 if (fetch.IsCompletedSuccessfully)
                 {
-                    //Deserialize and return
-                    ready = true;
-                    return data;
+                    return fetch.Result;
                 } else
                 {
                     //Did not complete successfully

@@ -11,5 +11,11 @@ namespace LibDeltaSystem.Entities.ArkEntries
     {
         public string image_url;
         public string image_thumb_url;
+
+        public static readonly DeltaAsset MISSING_ICON = new DeltaAsset
+        {
+            image_thumb_url = "https://icon-assets.deltamap.net/legacy/broken_item_thumb.png",
+            image_url = "https://icon-assets.deltamap.net/legacy/broken_item.png"
+        };
     }
 }

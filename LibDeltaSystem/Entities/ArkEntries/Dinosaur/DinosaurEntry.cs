@@ -13,11 +13,12 @@ namespace LibDeltaSystem.Entities.ArkEntries.Dinosaur
         public float babyAgeSpeed;
         public float extraBabyAgeSpeedMultiplier;
         public bool useBabyGestation;
+        public float extraBabyAgeMultiplier;
 
-        public ArkDinoEntryStatusComponent statusComponent;
+        public DinosaurEntryStatusComponent statusComponent;
 
-        public List<ArkDinoFood> adultFoods;
-        public List<ArkDinoFood> childFoods;
+        public List<DinosaurEntryFood> adultFoods;
+        public List<DinosaurEntryFood> childFoods;
 
         public string classname;
 
@@ -32,7 +33,7 @@ namespace LibDeltaSystem.Entities.ArkEntries.Dinosaur
         public int version;
     }
 
-    public class ArkDinoEntryStatusComponent
+    public class DinosaurEntryStatusComponent
     {
         public float baseFoodConsumptionRate;
         public float babyDinoConsumingFoodRateMultiplier;
@@ -41,7 +42,7 @@ namespace LibDeltaSystem.Entities.ArkEntries.Dinosaur
         public float tamedBaseHealthMultiplier;
     }
 
-    public class ArkDinoFood
+    public class DinosaurEntryFood
     {
         public string classname;
         public float foodEffectivenessMultiplier;
