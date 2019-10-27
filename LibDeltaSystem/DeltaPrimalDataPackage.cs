@@ -14,10 +14,12 @@ namespace LibDeltaSystem
     public class DeltaPrimalDataPackage
     {
         public List<DinosaurEntry> dino_entries;
+        public List<ItemEntry> item_entries;
 
         public DeltaPrimalDataPackage()
         {
             dino_entries = new List<DinosaurEntry>();
+            item_entries = new List<ItemEntry>();
         }
 
         /// <summary>
@@ -34,6 +36,7 @@ namespace LibDeltaSystem
             using (ZipArchive zip = new ZipArchive(s, ZipArchiveMode.Read))
             {
                 package.dino_entries = await ZipHelper<List<DinosaurEntry>>(zip.GetEntry("dinos.bson"));
+                package.item_entries = await ZipHelper<List<ItemEntry>>(zip.GetEntry("items.bson"));
             }
 
             return package;
@@ -57,6 +60,7 @@ namespace LibDeltaSystem
         {
             //Copy and overwrite entries
             destination.dino_entries.AddRange(dino_entries);
+            destination.item_entries.AddRange(item_entries);
         }
 
         /// <summary>
@@ -116,10 +120,31 @@ namespace LibDeltaSystem
                 classname = classname.Substring(0, classname.Length - 2);
 
             //Search
-            for(var i = dino_entries.Count - 1; i>=0; i++)
+            for(var i = dino_entries.Count - 1; i>=0; i--)
             {
                 if (dino_entries[i].classname == classname)
                     return dino_entries[i];
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Returns an item entry by it's classname
+        /// </summary>
+        /// <param name="classname"></param>
+        /// <returns></returns>
+        public ItemEntry GetItemEntry(string classname)
+        {
+            //Trim ending _C, if it's there
+            if (classname.EndsWith("_C"))
+                classname = classname.Substring(0, classname.Length - 2);
+
+            //Search
+            for (var i = item_entries.Count - 1; i >= 0; i--)
+            {
+                if (item_entries[i].classname == classname)
+                    return item_entries[i];
             }
 
             return null;
