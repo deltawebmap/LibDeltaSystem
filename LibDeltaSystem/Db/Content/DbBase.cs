@@ -3,6 +3,7 @@ using MongoDB.Bson;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Newtonsoft.Json;
 
 namespace LibDeltaSystem.Db.Content
 {
@@ -15,21 +16,31 @@ namespace LibDeltaSystem.Db.Content
         /// ID used internally that shouldn't be touched by us
         /// </summary>
         [BsonIgnoreIfDefault]
+        [JsonIgnore]
         public ObjectId _id { get; set; }
 
         /// <summary>
         /// Server this dinosaur belongs to
         /// </summary>
+        [JsonIgnore]
         public string server_id { get; set; }
 
         /// <summary>
         /// The tribe ID this dinosaur belongs to
         /// </summary>
+        [JsonIgnore]
         public int tribe_id { get; set; }
 
         /// <summary>
-        /// Version control
+        /// Version control. Unique to each server and used to overwrite and remove values
         /// </summary>
-        public uint revision_id { get; set; }
+        [JsonIgnore]
+        public string token { get; set; }
+
+        /// <summary>
+        /// More version control
+        /// </summary>
+        [JsonIgnore]
+        public string hash { get; set; }
     }
 }

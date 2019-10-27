@@ -53,24 +53,5 @@ namespace LibDeltaSystem.Db.System
             var filter = filterBuilder.Eq("_id", _id);
             await conn.system_tokens.FindOneAndDeleteAsync(filter);
         }
-
-        /// <summary>
-        /// Generates a secure string THAT MAY NOT BE UNIQUE.
-        /// </summary>
-        /// <returns></returns>
-        public static string GenerateSecureString(int len)
-        {
-            char[] tokenChars = "1234567890ABCDEF".ToCharArray();
-            RNGCryptoServiceProvider provider = new RNGCryptoServiceProvider();
-            var byteArray = new byte[len];
-            provider.GetBytes(byteArray);
-            char[] outputChars = new char[len];
-            for(var i = 0; i<len; i++)
-            {
-                char c = tokenChars[byteArray[i] % (tokenChars.Length - 1)];
-                outputChars[i] = c;
-            }
-            return new string(outputChars);
-        }
     }
 }

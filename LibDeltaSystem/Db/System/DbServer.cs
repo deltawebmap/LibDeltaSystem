@@ -1,4 +1,5 @@
 ﻿using LibDeltaSystem.Db.Content;
+using LibDeltaSystem.Db.System.Entities;
 using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
@@ -26,6 +27,16 @@ namespace LibDeltaSystem.Db.System
         public bool has_custom_image { get; set; }
 
         /// <summary>
+        /// The machine this is connected to. Not null.
+        /// </summary>
+        public string machine_uid { get; set; }
+
+        /// <summary>
+        /// The settings used to load the map data.
+        /// </summary>
+        public DbServer_LoadSettings load_settings { get; set; }
+
+        /// <summary>
         /// ID of the owner of the server
         /// </summary>
         public string owner_uid { get; set; }
@@ -33,7 +44,7 @@ namespace LibDeltaSystem.Db.System
         /// <summary>
         /// Creds checked to verify the connection between the slave server.
         /// </summary>
-        public byte[] server_creds { get; set; }
+        public string token { get; set; }
 
         /// <summary>
         /// The latest map the server was on.
@@ -84,6 +95,36 @@ namespace LibDeltaSystem.Db.System
         /// The revision ID to use when searching for content.
         /// </summary>
         public uint revision_id { get; set; }
+
+        /// <summary>
+        /// Game config settings
+        /// </summary>
+        public DbServerGameSettings game_settings { get; set; }
+
+        /// <summary>
+        /// Server mods
+        /// </summary>
+        public string[] mods { get; set; }
+
+        /// <summary>
+        /// Token used by the optional mirror service
+        /// </summary>
+        public string mirror_token { get; set; }
+
+        /// <summary>
+        /// Latest time a mirror message was downloaded
+        /// </summary>
+        public DateTime mirror_latest_time { get; set; }
+
+        /// <summary>
+        /// Latest version of Mirror used
+        /// </summary>
+        public int mirror_latest_version { get; set; }
+
+        /// <summary>
+        /// Files for echo sync
+        /// </summary>
+        public List<ServerEchoUploadedFile> echo_files { get; set; }
 
         /// <summary>
         /// Updates this in the database
@@ -223,5 +264,26 @@ namespace LibDeltaSystem.Db.System
             //Now, return URL
             return "https://icon-assets.deltamap.net/legacy/placeholder_server_images/" + output + ".png";
         }
+    }
+
+    /// <summary>
+    /// Settings for local clients
+    /// </summary>
+    public class DbServer_LoadSettings
+    {
+        /// <summary>
+        /// The pathname to the save directory. Always ends with / or \.
+        /// </summary>
+        public string save_pathname { get; set; }
+
+        /// <summary>
+        /// The .ark file to load, relative to save_pathname. Example: "Extinction.ark"
+        /// </summary>
+        public string save_map_name { get; set; }
+
+        /// <summary>
+        /// Path to the config name.
+        /// </summary>
+        public string config_pathname { get; set; }
     }
 }

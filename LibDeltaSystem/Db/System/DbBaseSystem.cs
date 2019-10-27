@@ -29,6 +29,7 @@ namespace LibDeltaSystem.Db.System
         /// The connection. This will use this to update or modify.
         /// </summary>
         [BsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public DeltaConnection conn;
     }
 }

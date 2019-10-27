@@ -38,6 +38,11 @@ namespace LibDeltaSystem.Db.System
         public DbUserSettings user_settings { get; set; }
 
         /// <summary>
+        /// Tokens for sending Firebase notifications
+        /// </summary>
+        public List<string> notification_tokens { get; set; }
+
+        /// <summary>
         /// Updates this in the database
         /// </summary>
         public void Update()
@@ -74,6 +79,16 @@ namespace LibDeltaSystem.Db.System
         public List<Tuple<DbServer, DbPlayerProfile>> GetGameServers()
         {
             return GetGameServersAsync().GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// Checks if this user is a premium, subscribed, member
+        /// </summary>
+        /// <returns></returns>
+        public bool GetIsPremium()
+        {
+            //This'll be added in the future sometime...
+            return true;
         }
 
         /// <summary>
@@ -128,9 +143,9 @@ namespace LibDeltaSystem.Db.System
         public async Task<string> MakeToken()
         {
             //Generate a unique string
-            string token = DbToken.GenerateSecureString(64);
+            string token = Tools.SecureStringTool.GenerateSecureString(64);
             while(conn.AuthenticateUserToken(token).GetAwaiter().GetResult() != null)
-                token = DbToken.GenerateSecureString(64);
+                token = Tools.SecureStringTool.GenerateSecureString(64);
 
             //Now, create a token object
             DbToken t = new DbToken

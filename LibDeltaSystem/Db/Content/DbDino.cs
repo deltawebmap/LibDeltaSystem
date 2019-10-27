@@ -1,7 +1,9 @@
-﻿using MongoDB.Bson.Serialization.Attributes;
+﻿using LibDeltaSystem.Db.System.Entities;
+using MongoDB.Bson.Serialization.Attributes;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace LibDeltaSystem.Db.Content
 {
@@ -96,5 +98,20 @@ namespace LibDeltaSystem.Db.Content
         /// The location of this dinosaur
         /// </summary>
         public DbLocation location { get; set; }
+
+        /// <summary>
+        /// Agro status
+        /// </summary>
+        public string status { get; set; }
+
+        /// <summary>
+        /// Returns this dino's prefs. Will never return null.
+        /// </summary>
+        /// <param name="conn"></param>
+        /// <returns></returns>
+        public async Task<SavedDinoTribePrefs> GetPrefs(DeltaConnection conn)
+        {
+            return await conn.GetDinoPrefs(server_id, tribe_id, dino_id);
+        }
     }
 }

@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace LibDeltaSystem.Db.Content
@@ -63,10 +65,31 @@ namespace LibDeltaSystem.Db.Content
         /// Name of the tribe that crafted this item, if it was crafted
         /// </summary>
         public string crafter_tribe { get; set; }
+
+        /// <summary>
+        /// Gets the database hash
+        /// </summary>
+        /// <returns></returns>
+        public string GetHash()
+        {
+            //This is kind of gross...
+            byte[] sin = Encoding.UTF8.GetBytes(parent_id + parent_type.ToString() + stack_size.ToString() + saved_durability.ToString());
+
+            //Get hash code
+            string hash;
+            using (SHA1Managed sha1 = new SHA1Managed())
+            {
+                byte[] hashBytes = sha1.ComputeHash(sin);
+                hash = string.Concat(hashBytes.Select(b => b.ToString("x2")));
+            }
+
+            return hash;
+        }
     }
 
     public enum DbInventoryParentType
     {
-        Dino
+        Dino,
+        Structure
     }
 }

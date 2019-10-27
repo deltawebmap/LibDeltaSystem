@@ -16,5 +16,7 @@ namespace LibDeltaSystem
 
         public string server_ip;
         public int server_port;
+
+        public string firebase_config; //Path to firebase config file
     }
 }
