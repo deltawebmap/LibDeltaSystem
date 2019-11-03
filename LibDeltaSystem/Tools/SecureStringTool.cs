@@ -17,13 +17,30 @@ namespace LibDeltaSystem.Tools
         /// <returns></returns>
         public static string GenerateSecureString(int len)
         {
-            char[] tokenChars = "1234567890ABCDEF".ToCharArray();
+            return GenerateSecureString(len, "1234567890ABCDEF".ToCharArray());
+        }
+
+        /// <summary>
+        /// Generates a secure string THAT MAY NOT BE UNIQUE.
+        /// </summary>
+        /// <returns></returns>
+        public static string GenerateSecureShorthandCode()
+        {
+            return GenerateSecureString(8, "01234567890".ToCharArray());
+        }
+
+        /// <summary>
+        /// Generates a secure string THAT MAY NOT BE UNIQUE.
+        /// </summary>
+        /// <returns></returns>
+        public static string GenerateSecureString(int len, char[] charset)
+        {
             var byteArray = new byte[len];
             provider.GetBytes(byteArray);
             char[] outputChars = new char[len];
             for (var i = 0; i < len; i++)
             {
-                char c = tokenChars[byteArray[i] % (tokenChars.Length - 1)];
+                char c = charset[byteArray[i] % (charset.Length - 1)];
                 outputChars[i] = c;
             }
             return new string(outputChars);

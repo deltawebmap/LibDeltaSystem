@@ -27,6 +27,11 @@ namespace LibDeltaSystem.Db.System
         public string token { get; set; }
 
         /// <summary>
+        /// The short 000-000 token that is only active for a short time before the server is activated. If first_activation_time is greater than 60 seconds old, this is ignored.
+        /// </summary>
+        public string shorthand_token { get; set; }
+
+        /// <summary>
         /// The name set by the user. Doesn't mean much.
         /// </summary>
         public string name { get; set; }
@@ -37,7 +42,7 @@ namespace LibDeltaSystem.Db.System
         public bool is_activated { get; set; }
 
         /// <summary>
-        /// The first time this server was activated
+        /// The first time this server was activated. If the server wasn't activated, this shows the time that the server was last checked for activation.
         /// </summary>
         public DateTime first_activation_time { get; set; }
 
@@ -67,9 +72,14 @@ namespace LibDeltaSystem.Db.System
         public static async Task<DbMachine> CreateMachineAsync(DeltaConnection conn, string owner_type, ObjectId owner, string name)
         {
             //Generate a random token
-            string token = Tools.SecureStringTool.GenerateSecureString(82);
+            string token = Tools.SecureStringTool.GenerateSecureString(256);
             while (!await Tools.SecureStringTool.CheckStringUniquenessAsync<DbMachine>(token, conn.system_machines))
-                token = Tools.SecureStringTool.GenerateSecureString(82);
+                token = Tools.SecureStringTool.GenerateSecureString(256);
+
+            //Generate a shorthand string
+            string shorthand = Tools.SecureStringTool.GenerateSecureShorthandCode();
+            while (await conn.GetMachineByShorthandTokenAsync(shorthand) != null)
+                shorthand = Tools.SecureStringTool.GenerateSecureShorthandCode();
 
             //Create an object
             DbMachine machine = new DbMachine
@@ -79,6 +89,9 @@ namespace LibDeltaSystem.Db.System
                 owner_id = owner.ToString(),
                 owner_type = owner_type,
                 token = token,
+                first_activation_time = DateTime.UtcNow,
+                is_activated = false,
+                shorthand_token = shorthand,
                 _id = ObjectId.GenerateNewId()
             };
 

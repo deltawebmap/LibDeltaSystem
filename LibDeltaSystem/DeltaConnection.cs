@@ -435,6 +435,37 @@ namespace LibDeltaSystem
         }
 
         /// <summary>
+        /// Returns a machine from it's shorthand token and ensures that it is still valid.
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        public async Task<DbMachine> GetMachineByShorthandTokenAsync(string token)
+        {
+            //Catch cheaters and make sure that the token is not null
+            if (token == null)
+                return null;
+            
+            //Fetch
+            var filterBuilder = Builders<DbMachine>.Filter;
+            var filter = filterBuilder.Eq("shorthand_token", token) & filterBuilder.Gt("first_activation_time", DateTime.UtcNow.AddMinutes(-1));
+            var results = await system_machines.FindAsync(filter);
+            var u = await results.FirstOrDefaultAsync();
+
+            //If not found, return null
+            if (u == null)
+                return null;
+
+            //If this machine is somehow activated, do not return it
+            if (u.is_activated)
+                return null;
+
+            //Add some props
+            u.conn = this;
+
+            return u;
+        }
+
+        /// <summary>
         /// Returns a token object from the token string
         /// </summary>
         /// <param name="token"></param>

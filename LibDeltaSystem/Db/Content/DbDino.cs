@@ -105,6 +105,11 @@ namespace LibDeltaSystem.Db.Content
         public string status { get; set; }
 
         /// <summary>
+        /// Taming effectiveness
+        /// </summary>
+        public float taming_effectiveness { get; set; }
+
+        /// <summary>
         /// Returns this dino's prefs. Will never return null.
         /// </summary>
         /// <param name="conn"></param>
