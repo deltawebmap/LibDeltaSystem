@@ -67,6 +67,11 @@ namespace LibDeltaSystem.Db.Content
         public string crafter_tribe { get; set; }
 
         /// <summary>
+        /// Used for version control. Matches the revision ID type of the parent inventory
+        /// </summary>
+        public int revision_id { get; set; }
+
+        /// <summary>
         /// Gets the database hash
         /// </summary>
         /// <returns></returns>

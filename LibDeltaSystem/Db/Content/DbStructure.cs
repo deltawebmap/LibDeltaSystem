@@ -40,5 +40,15 @@ namespace LibDeltaSystem.Db.Content
         /// The current health of this structure
         /// </summary>
         public float current_health { get; set; }
+
+        /// <summary>
+        /// Unique ID for this structure
+        /// </summary>
+        public int structure_id { get; set; }
+
+        /// <summary>
+        /// Used for version control
+        /// </summary>
+        public int revision_id { get; set; }
     }
 }

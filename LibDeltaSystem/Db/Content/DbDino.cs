@@ -48,6 +48,11 @@ namespace LibDeltaSystem.Db.Content
         /// The current stats
         /// </summary>
         public DbArkDinosaurStats current_stats { get; set; }
+        
+        /// <summary>
+        /// The max stats, sent from ARK
+        /// </summary>
+        public DbArkDinosaurStats max_stats { get; set; }
 
         /// <summary>
         /// The number of levelups applied
@@ -108,6 +113,11 @@ namespace LibDeltaSystem.Db.Content
         /// Taming effectiveness
         /// </summary>
         public float taming_effectiveness { get; set; }
+
+        /// <summary>
+        /// Revision ID this is mapped to
+        /// </summary>
+        public int revision_id { get; set; }
 
         /// <summary>
         /// Returns this dino's prefs. Will never return null.

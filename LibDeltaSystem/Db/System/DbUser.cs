@@ -167,19 +167,14 @@ namespace LibDeltaSystem.Db.System
         /// Finds and devalidates all tokens belonging to this user.
         /// </summary>
         /// <returns></returns>
-        public async Task<int> DevalidateAllTokens()
+        public async Task<long> DevalidateAllTokens()
         {
             //Search for all
             var filterBuilder = Builders<DbToken>.Filter;
             var filter = filterBuilder.Eq("user_id", id);
-            var results = await conn.system_tokens.FindAsync(filter);
-            var resultList = await results.ToListAsync();
+            var results = await conn.system_tokens.DeleteManyAsync(filter);
 
-            //Clear all
-            foreach (var r in resultList)
-                r.DeleteAsync().GetAwaiter().GetResult();
-
-            return resultList.Count;
+            return results.DeletedCount;
         }
     }
 }

@@ -550,7 +550,11 @@ namespace LibDeltaSystem
             var filterBuilder = Builders<DbServer>.Filter;
             var filter = filterBuilder.Eq("token", token);
             var results = await system_servers.FindAsync(filter);
-            return await results.FirstOrDefaultAsync();
+            var s = await results.FirstOrDefaultAsync();
+            if (s == null)
+                return null;
+            s.conn = this;
+            return s;
         }
 
         /// <summary>

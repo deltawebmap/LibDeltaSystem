@@ -25,5 +25,15 @@ namespace LibDeltaSystem.Db.Content
         /// The Steam ID used for this character
         /// </summary>
         public string steam_id { get; set; }
+
+        /// <summary>
+        /// Last time this person logged into the game
+        /// </summary>
+        public double last_login { get; set; }
+
+        /// <summary>
+        /// Steam icon
+        /// </summary>
+        public string icon { get; set; }
     }
 }

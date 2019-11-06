@@ -27,7 +27,7 @@ namespace LibDeltaSystem.Db.System
         public bool has_custom_image { get; set; }
 
         /// <summary>
-        /// The machine this is connected to. Not null.
+        /// The machine this is connected to. Can be null if created using the mods.
         /// </summary>
         public string machine_uid { get; set; }
 
@@ -52,49 +52,14 @@ namespace LibDeltaSystem.Db.System
         public string latest_server_map { get; set; }
 
         /// <summary>
-        /// The friendly name of the latest server map
-        /// </summary>
-        public string latest_server_map_name { get; set; }
-
-        /// <summary>
         /// Latest time of the Ark server
         /// </summary>
         public float latest_server_time { get; set; }
 
         /// <summary>
-        /// If we have the above four values
-        /// </summary>
-        public bool has_server_report { get; set; }
-
-        /// <summary>
-        /// Is published and public
-        /// </summary>
-        public bool is_published { get; set; }
-
-        /// <summary>
-        /// If this managed by a provider
-        /// </summary>
-        public bool is_managed { get; set; }
-
-        /// <summary>
-        /// The ID of the provider managing this server.
-        /// </summary>
-        public string provider_id { get; set; }
-
-        /// <summary>
-        /// The linked provider server ID
-        /// </summary>
-        public string provider_server_id { get; set; }
-
-        /// <summary>
         /// The linked cluster ID. Can be null if this is not in a cluster.
         /// </summary>
         public string cluster_id { get; set; }
-
-        /// <summary>
-        /// The revision ID to use when searching for content.
-        /// </summary>
-        public uint revision_id { get; set; }
 
         /// <summary>
         /// Game config settings
@@ -107,24 +72,19 @@ namespace LibDeltaSystem.Db.System
         public string[] mods { get; set; }
 
         /// <summary>
-        /// Token used by the optional mirror service
-        /// </summary>
-        public string mirror_token { get; set; }
-
-        /// <summary>
-        /// Latest time a mirror message was downloaded
-        /// </summary>
-        public DateTime mirror_latest_time { get; set; }
-
-        /// <summary>
-        /// Latest version of Mirror used
-        /// </summary>
-        public int mirror_latest_version { get; set; }
-
-        /// <summary>
         /// Files for echo sync
         /// </summary>
         public List<ServerEchoUploadedFile> echo_files { get; set; }
+
+        /// <summary>
+        /// Revision ID for dinos
+        /// </summary>
+        public int revision_id_dinos { get; set; }
+
+        /// <summary>
+        /// Revision ID for structures
+        /// </summary>
+        public int revision_id_structures { get; set; }
 
         /// <summary>
         /// Updates this in the database
@@ -143,6 +103,17 @@ namespace LibDeltaSystem.Db.System
             var filterBuilder = Builders<DbServer>.Filter;
             var filter = filterBuilder.Eq("_id", _id);
             await conn.system_servers.FindOneAndReplaceAsync(filter, this);
+        }
+
+        /// <summary>
+        /// Updates this in the database async
+        /// </summary>
+        /// <returns></returns>
+        public async Task ExplicitUpdateAsync(UpdateDefinition<DbServer> update)
+        {
+            var filterBuilder = Builders<DbServer>.Filter;
+            var filter = filterBuilder.Eq("_id", _id);
+            await conn.system_servers.FindOneAndUpdateAsync(filter, update);
         }
 
         /// <summary>
