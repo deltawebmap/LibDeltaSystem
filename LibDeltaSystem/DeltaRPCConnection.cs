@@ -53,7 +53,8 @@ namespace LibDeltaSystem
         {
             Thread t = new Thread(() =>
             {
-                while(true)
+                Connect();
+                while (true)
                 {
                     //Try to send the message
                     Tuple<int, byte[][]> data = null;
@@ -67,10 +68,11 @@ namespace LibDeltaSystem
                         }
 
                         //Delay
-                        Thread.Sleep(50);
+                        Thread.Sleep(10);
                     }
                     catch
                     {
+                        Console.WriteLine("Disconnected!");
                         //Failed. Put this message back in
                         if(data != null)
                             outboundQueue.Enqueue(data);
@@ -225,15 +227,16 @@ namespace LibDeltaSystem
                 sock.Connect(new IPEndPoint(IPAddress.Parse(conn.config.rpc_ip), conn.config.rpc_port));
 
                 //Get the salt, it is always the first thing downloaded
+                Thread.Sleep(500);
                 salt = new byte[32];
                 sock.Receive(salt);
 
                 //Now we'll authenticate by sending back our key, encoded with an HMAC
-                sock.Send(HMACTool.ComputeHMAC(key, salt, key));
-
+                //sock.Send(HMACTool.ComputeHMAC(key, salt, key));
                 return true;
-            } catch
+            } catch (Exception ex)
             {
+                Console.WriteLine(ex.Message + ex.StackTrace);
                 return false;
             }
         }
@@ -260,15 +263,18 @@ namespace LibDeltaSystem
         private void SendRawPacket(int opcode, params byte[][] parts)
         {
             //Allocate space
-            int len = 32 + 4 + 4;
+            int len = 32 + 4 + 4 + 4;
             foreach (var p in parts)
                 len += 4 + p.Length;
 
             //Create buffer
             byte[] buffer = new byte[len];
 
+            //Write length
+            HelperWriteInt32(buffer, 0, len-4);
+
             //Set opcode
-            int offset = 32;
+            int offset = 36;
             HelperWriteInt32(buffer, offset, opcode);
             offset += 4;
 
@@ -290,7 +296,7 @@ namespace LibDeltaSystem
 
             //Calculate and set HMAC
             byte[] hmac = HMACTool.ComputeHMAC(key, salt, key, buffer);
-            Array.Copy(hmac, 0, buffer, 0, 32);
+            Array.Copy(hmac, 0, buffer, 4, 32);
 
             //Send
             sock.Send(buffer);
