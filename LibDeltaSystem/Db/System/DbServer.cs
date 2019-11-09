@@ -235,6 +235,11 @@ namespace LibDeltaSystem.Db.System
             //Now, return URL
             return "https://icon-assets.deltamap.net/legacy/placeholder_server_images/" + output + ".png";
         }
+
+        public bool IsUserAdmin(DbUser user)
+        {
+            return owner_uid == user.id;
+        }
     }
 
     /// <summary>

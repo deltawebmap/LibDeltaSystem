@@ -47,6 +47,18 @@ namespace LibDeltaSystem.Tools
         }
 
         /// <summary>
+        /// Generates secure random bytes
+        /// </summary>
+        /// <param name="len"></param>
+        /// <returns></returns>
+        public static byte[] GenerateSecureRandomBytes(int len)
+        {
+            byte[] buf = new byte[len];
+            provider.GetBytes(buf);
+            return buf;
+        }
+
+        /// <summary>
         /// Checks against a collection if this string was already in use. Returns true if this string is unique.
         /// </summary>
         /// <typeparam name="T"></typeparam>

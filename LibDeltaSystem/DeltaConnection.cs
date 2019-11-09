@@ -119,6 +119,26 @@ namespace LibDeltaSystem
         }
 
         /// <summary>
+        /// Only set after GetRPC is called
+        /// </summary>
+        private DeltaRPCConnection _rpc;
+
+        /// <summary>
+        /// Gets an RPC connection. This can be used to get the RPC object anytime
+        /// </summary>
+        /// <returns></returns>
+        public DeltaRPCConnection GetRPC()
+        {
+            //Create a new RPC if needed
+            if(_rpc == null)
+            {
+                _rpc = new DeltaRPCConnection(this);
+                _rpc.Init();
+            }
+            return _rpc;
+        }
+
+        /// <summary>
         /// Sends a Firebase notification to all users with this tribe. Returns number of successful notifications.
         /// </summary>
         /// <param name="server"></param>
@@ -586,6 +606,34 @@ namespace LibDeltaSystem
                 return null;
             else
                 return r;
+        }
+
+        /// <summary>
+        /// Returns all player profiles for a server
+        /// </summary>
+        /// <param name="tribeId"></param>
+        /// <returns></returns>
+        public async Task<List<DbPlayerProfile>> GetServerPlayerProfilesAsync(string serverId)
+        {
+            var filterBuilder = Builders<DbPlayerProfile>.Filter;
+            var filter = filterBuilder.Eq("server_id", serverId);
+            var results = await content_player_profiles.FindAsync(filter);
+            return await results.ToListAsync();
+        }
+
+
+        /// <summary>
+        /// Returns all player profiles in a tribe
+        /// </summary>
+        /// <param name="serverId"></param>
+        /// <param name="tribeId"></param>
+        /// <returns></returns>
+        public async Task<List<DbPlayerProfile>> GetServerPlayerProfilesByTribeAsync(string serverId, int tribeId)
+        {
+            var filterBuilder = Builders<DbPlayerProfile>.Filter;
+            var filter = filterBuilder.Eq("server_id", serverId) & filterBuilder.Eq("tribe_id", tribeId);
+            var results = await content_player_profiles.FindAsync(filter);
+            return await results.ToListAsync();
         }
 
         public async Task<List<DbUser>> GetAllUsersInTribe(string serverId, int tribeId)
