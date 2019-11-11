@@ -28,6 +28,19 @@ namespace LibDeltaSystem.Tools
             return hmac.ComputeHash(buffer);
         }
 
+        public static byte[] ComputeHMAC(byte[] key, byte[] salt, byte[] payload, int payload_length, int payload_offset = 0)
+        {
+            //Create data to check
+            byte[] data = new byte[key.Length + salt.Length + payload_length];
+            Array.Copy(key, 0, data, 0, key.Length);
+            Array.Copy(salt, 0, data, key.Length, salt.Length);
+            Array.Copy(payload, payload_offset, data, key.Length + salt.Length, payload_length);
+            
+            //Compute this
+            HMACSHA256 hmac = new HMACSHA256(key);
+            return hmac.ComputeHash(data);
+        }
+
         public static bool CompareHMAC(byte[] b1, byte[] b2)
         {
             if (b1.Length < 32 || b2.Length < 32)

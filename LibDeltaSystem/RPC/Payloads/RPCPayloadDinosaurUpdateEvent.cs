@@ -19,6 +19,7 @@ namespace LibDeltaSystem.RPC.Payloads
             public float y;
             public float z;
             public string id;
+            public string species;
         }
     }
 }

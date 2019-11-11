@@ -36,6 +36,11 @@ namespace LibDeltaSystem
         public byte[] key;
 
         /// <summary>
+        /// The queue is suspended while this is false
+        /// </summary>
+        public bool authenticated = false;
+
+        /// <summary>
         /// The outbound message queue
         /// </summary>
         public ConcurrentQueue<Tuple<int, byte[][]>> outboundQueue = new ConcurrentQueue<Tuple<int, byte[][]>>();
@@ -63,6 +68,10 @@ namespace LibDeltaSystem
                         //Keep dequeuing messages
                         while (outboundQueue.TryDequeue(out data))
                         {
+                            //Wait to send if we're not authenticated
+                            while (!authenticated)
+                                Thread.Sleep(10);
+
                             //Send
                             SendRawPacket(data.Item1, data.Item2);
                         }
@@ -196,6 +205,7 @@ namespace LibDeltaSystem
         /// </summary>
         private void QueueMessage(int opcode, params byte[][] data)
         {
+            Console.WriteLine("Queued message "+opcode);
             outboundQueue.Enqueue(new Tuple<int, byte[][]>(opcode, data));
         }
 
@@ -231,8 +241,10 @@ namespace LibDeltaSystem
                 salt = new byte[32];
                 sock.Receive(salt);
 
-                //Now we'll authenticate by sending back our key, encoded with an HMAC
-                //sock.Send(HMACTool.ComputeHMAC(key, salt, key));
+                //Now, send auth request
+                SendRawPacket(0, HMACTool.ComputeHMAC(key, salt, key), Encoding.UTF8.GetBytes(conn.system_name));
+                Thread.Sleep(500);
+                authenticated = true;
                 return true;
             } catch (Exception ex)
             {
@@ -262,6 +274,8 @@ namespace LibDeltaSystem
         /// <param name="parts"></param>
         private void SendRawPacket(int opcode, params byte[][] parts)
         {
+            Console.WriteLine("Sending packet " + opcode);
+            
             //Allocate space
             int len = 32 + 4 + 4 + 4;
             foreach (var p in parts)

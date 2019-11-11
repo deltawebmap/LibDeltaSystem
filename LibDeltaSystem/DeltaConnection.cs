@@ -40,6 +40,7 @@ namespace LibDeltaSystem
         public IMongoCollection<DbPreregisteredUser> system_preregistered;
         public IMongoCollection<DbSavedUserServerPrefs> system_saved_user_server_prefs;
         public IMongoCollection<DbSavedDinoTribePrefs> system_saved_dino_tribe_prefs;
+        public IMongoCollection<DbDynamicTileCache> system_dynamic_tile_cache;
 
         public DeltaConnectionConfig config;
 
@@ -107,6 +108,7 @@ namespace LibDeltaSystem
             system_preregistered = system_database.GetCollection<DbPreregisteredUser>("preregistered_users");
             system_saved_user_server_prefs = system_database.GetCollection<DbSavedUserServerPrefs>("saved_user_server_prefs");
             system_saved_dino_tribe_prefs = system_database.GetCollection<DbSavedDinoTribePrefs>("saved_dino_tribe_prefs");
+            system_dynamic_tile_cache = system_database.GetCollection<DbDynamicTileCache>("dynamic_tile_cache");
 
             //Set up Google Firebase
             if(config.firebase_config != null)
@@ -642,6 +644,17 @@ namespace LibDeltaSystem
             var filter = filterBuilder.Eq("tribe_id", tribeId) & filterBuilder.Eq("server_id", serverId);
             var results = await content_player_profiles.FindAsync(filter);
             throw new NotImplementedException(); //TODO!!!
+        }
+
+        /// <summary>
+        /// Returns a cached dynamic tile, if any
+        /// </summary>
+        /// <param name="target"></param>
+        /// <returns></returns>
+        public async Task<DbDynamicTileCache> GetCachedDynamicTile(DynamicTileTarget target)
+        {
+            var results = await system_dynamic_tile_cache.FindAsync(target.CreateFilter());
+            return await results.FirstOrDefaultAsync();
         }
     }
 }
