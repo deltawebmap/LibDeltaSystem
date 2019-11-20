@@ -95,6 +95,22 @@ namespace LibDeltaSystem.Db.System
         }
 
         /// <summary>
+        /// Gets all canvases
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        public async Task<List<DbCanvas>> GetServerCanvases()
+        {
+            var filterBuilder = Builders<DbCanvas>.Filter;
+            var filter = filterBuilder.Eq("server_id", id);
+            var result = await conn.system_canvases.FindAsync(filter);
+            List<DbCanvas> can = await result.ToListAsync();
+            foreach (var c in can)
+                c.conn = conn;
+            return can;
+        }
+
+        /// <summary>
         /// Updates this in the database async
         /// </summary>
         /// <returns></returns>

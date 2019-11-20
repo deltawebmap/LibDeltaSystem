@@ -19,11 +19,6 @@ namespace LibDeltaSystem.Tools.InternalComms
     public abstract class InternalCommClient : InternalCommBase
     {
         /// <summary>
-        /// The outbound message queue
-        /// </summary>
-        public ConcurrentQueue<Tuple<int, byte[][]>> outboundQueue = new ConcurrentQueue<Tuple<int, byte[][]>>();
-
-        /// <summary>
         /// Endpoint to connect to
         /// </summary>
         public IPEndPoint endpoint;
@@ -36,6 +31,11 @@ namespace LibDeltaSystem.Tools.InternalComms
         public InternalCommClient(DeltaConnection conn, byte[] key, IPEndPoint endpoint) : base(conn, key, false)
         {
             this.endpoint = endpoint;
+
+            //Set timeout timer
+            connectTimeout = new System.Timers.Timer(timeout);
+            connectTimeout.AutoReset = false;
+            connectTimeout.Elapsed += OnConnectFailed;
         }
 
         public override void OnAuthorized()
@@ -51,14 +51,9 @@ namespace LibDeltaSystem.Tools.InternalComms
             //Log
             Log("Connect", "Attempting to connect...");
 
-            //Set timeout timer
-            connectTimeout = new System.Timers.Timer(timeout);
-            connectTimeout.AutoReset = false;
-            connectTimeout.Elapsed += OnConnectFailed;
-            connectTimeout.Start();
-
             //Connect
             sock = new Socket(SocketType.Stream, ProtocolType.Tcp);
+            connectTimeout.Start();
             sock.BeginConnect(endpoint, OnConnect, null);
         }
 
@@ -91,6 +86,10 @@ namespace LibDeltaSystem.Tools.InternalComms
         {
             //Log
             Log("OnConnectFailed", "Connection failed. Retrying...");
+            Console.WriteLine(connectTimeout.Enabled);
+
+            //Stop timer
+            connectTimeout.Stop();
 
             //Abort connect
             OnDisconnect();

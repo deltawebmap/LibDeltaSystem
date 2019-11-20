@@ -10,90 +10,26 @@ using LibDeltaSystem.RPC;
 using Newtonsoft.Json;
 using LibDeltaSystem.Db.System;
 using System.Threading.Tasks;
+using LibDeltaSystem.Tools.InternalComms;
 
 namespace LibDeltaSystem
 {
-    public class DeltaRPCConnection
+    public class DeltaRPCConnection : InternalCommClient
     {
-        /// <summary>
-        /// Connection to the server
-        /// </summary>
-        public Socket sock;
-
-        /// <summary>
-        /// Delta connection
-        /// </summary>
-        public DeltaConnection conn;
-
-        /// <summary>
-        /// Salt, as sent by the server
-        /// </summary>
-        public byte[] salt;
-
-        /// <summary>
-        /// Authentication key
-        /// </summary>
-        public byte[] key;
-
-        /// <summary>
-        /// The queue is suspended while this is false
-        /// </summary>
-        public bool authenticated = false;
-
-        /// <summary>
-        /// The outbound message queue
-        /// </summary>
-        public ConcurrentQueue<Tuple<int, byte[][]>> outboundQueue = new ConcurrentQueue<Tuple<int, byte[][]>>();
-
-        public DeltaRPCConnection(DeltaConnection conn)
+        public DeltaRPCConnection(DeltaConnection conn, byte[] key, IPEndPoint endpoint) : base(conn, key, endpoint)
         {
-            this.conn = conn;
-            this.key = Convert.FromBase64String(conn.config.rpc_key);
+
         }
 
         /// <summary>
-        /// Starts the connection
+        /// Should never be called
         /// </summary>
-        public void Init()
+        /// <param name="opcode"></param>
+        /// <param name="payloads"></param>
+        /// <returns></returns>
+        public override async Task HandleMessage(int opcode, Dictionary<string, byte[]> payloads)
         {
-            Thread t = new Thread(() =>
-            {
-                Connect();
-                while (true)
-                {
-                    //Try to send the message
-                    Tuple<int, byte[][]> data = null;
-                    try
-                    {
-                        //Keep dequeuing messages
-                        while (outboundQueue.TryDequeue(out data))
-                        {
-                            //Wait to send if we're not authenticated
-                            while (!authenticated)
-                                Thread.Sleep(10);
-
-                            //Send
-                            SendRawPacket(data.Item1, data.Item2);
-                        }
-
-                        //Delay
-                        Thread.Sleep(10);
-                    }
-                    catch
-                    {
-                        Console.WriteLine("Disconnected!");
-                        //Failed. Put this message back in
-                        if(data != null)
-                            outboundQueue.Enqueue(data);
-
-                        //Reconnect and retry
-                        Thread.Sleep(5000);
-                        Connect();
-                    }
-                }
-            });
-            t.IsBackground = true;
-            t.Start();
+            
         }
 
         /// <summary>
@@ -114,7 +50,11 @@ namespace LibDeltaSystem
             byte[] filterMsg = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(filter));
 
             //Queue
-            QueueMessage(1, filterMsg, message);
+            RawSendMessage(1, new Dictionary<string, byte[]>
+            {
+                {"FILTER", filterMsg },
+                {"DATA", message }
+            });
         }
 
         /// <summary>
@@ -198,122 +138,6 @@ namespace LibDeltaSystem
         public void SendRPCMessageToUser(RPCOpcode opcode, RPCPayload payload, DbUser user)
         {
             SendRPCMessageToUser(opcode, payload, user.id);
-        }
-
-        /// <summary>
-        /// Adds a message to the queue
-        /// </summary>
-        private void QueueMessage(int opcode, params byte[][] data)
-        {
-            Console.WriteLine("Queued message "+opcode);
-            outboundQueue.Enqueue(new Tuple<int, byte[][]>(opcode, data));
-        }
-
-        /// <summary>
-        /// Connects to the system
-        /// </summary>
-        private bool Connect()
-        {
-            //If we already have a connection, end it
-            if(sock != null)
-            {
-                Console.WriteLine("RECONNECTING!");
-
-                //Try to close it
-                try
-                {
-                    sock.Close();
-                }
-                catch { }
-
-                //Wait
-                Thread.Sleep(5000);
-            }
-
-            try
-            {
-                //Create a new connection
-                sock = new Socket(SocketType.Stream, ProtocolType.Tcp);
-                sock.Connect(new IPEndPoint(IPAddress.Parse(conn.config.rpc_ip), conn.config.rpc_port));
-
-                //Get the salt, it is always the first thing downloaded
-                Thread.Sleep(500);
-                salt = new byte[32];
-                sock.Receive(salt);
-
-                //Now, send auth request
-                SendRawPacket(0, HMACTool.ComputeHMAC(key, salt, key), Encoding.UTF8.GetBytes(conn.system_name));
-                Thread.Sleep(500);
-                authenticated = true;
-                return true;
-            } catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message + ex.StackTrace);
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// Writes and Int32 to a buffer
-        /// </summary>
-        /// <param name="buf"></param>
-        /// <param name="pos"></param>
-        /// <param name="data"></param>
-        private void HelperWriteInt32(byte[] buf, int pos, int data)
-        {
-            byte[] d = BitConverter.GetBytes(data);
-            if (!BitConverter.IsLittleEndian)
-                Array.Reverse(d);
-            Array.Copy(d, 0, buf, pos, 4);
-        }
-
-        /// <summary>
-        /// Sends a raw encoded packet
-        /// </summary>
-        /// <param name="opcode"></param>
-        /// <param name="parts"></param>
-        private void SendRawPacket(int opcode, params byte[][] parts)
-        {
-            Console.WriteLine("Sending packet " + opcode);
-            
-            //Allocate space
-            int len = 32 + 4 + 4 + 4;
-            foreach (var p in parts)
-                len += 4 + p.Length;
-
-            //Create buffer
-            byte[] buffer = new byte[len];
-
-            //Write length
-            HelperWriteInt32(buffer, 0, len-4);
-
-            //Set opcode
-            int offset = 36;
-            HelperWriteInt32(buffer, offset, opcode);
-            offset += 4;
-
-            //Set number of parts
-            HelperWriteInt32(buffer, offset, parts.Length);
-            offset += 4;
-
-            //Set parts
-            for (int i = 0; i<parts.Length; i+=1)
-            {
-                //Write length
-                HelperWriteInt32(buffer, offset, parts[i].Length);
-                offset += 4;
-
-                //Write content
-                Array.Copy(parts[i], 0, buffer, offset, parts[i].Length);
-                offset += parts[i].Length;
-            }
-
-            //Calculate and set HMAC
-            byte[] hmac = HMACTool.ComputeHMAC(key, salt, key, buffer);
-            Array.Copy(hmac, 0, buffer, 4, 32);
-
-            //Send
-            sock.Send(buffer);
         }
     }
 }

@@ -9,5 +9,8 @@ namespace LibDeltaSystem.RPC
         RPCSetSessionID = 0, //Sets the initial session ID, sent by the server
         DinosaurUpdateEvent = 1, //Synced dino was updated
         LogMessage = 2, //Logs a message, eRPCPayloadLogMessage
+        CanvasChange = 3, //Called when a canvas is changed
+        PlayerListChanged = 4, //Called when the player list is updated
+        DinoPrefsChanged = 5 //Called when dino prefs change
     }
 }

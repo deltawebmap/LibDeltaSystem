@@ -4,6 +4,7 @@ using LibDeltaSystem.Db.Content;
 using LibDeltaSystem.Db.System;
 using LibDeltaSystem.Db.System.Entities;
 using LibDeltaSystem.Entities;
+using LibDeltaSystem.Entities.DynamicTiles;
 using LibDeltaSystem.Entities.PrivateNet;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -41,6 +42,9 @@ namespace LibDeltaSystem
         public IMongoCollection<DbSavedUserServerPrefs> system_saved_user_server_prefs;
         public IMongoCollection<DbSavedDinoTribePrefs> system_saved_dino_tribe_prefs;
         public IMongoCollection<DbDynamicTileCache> system_dynamic_tile_cache;
+        public IMongoCollection<DbCanvas> system_canvases;
+        public IMongoCollection<DbUserContent> system_user_uploads;
+        public IMongoCollection<DbSyncSavedState> system_sync_states;
 
         public DeltaConnectionConfig config;
 
@@ -109,6 +113,9 @@ namespace LibDeltaSystem
             system_saved_user_server_prefs = system_database.GetCollection<DbSavedUserServerPrefs>("saved_user_server_prefs");
             system_saved_dino_tribe_prefs = system_database.GetCollection<DbSavedDinoTribePrefs>("saved_dino_tribe_prefs");
             system_dynamic_tile_cache = system_database.GetCollection<DbDynamicTileCache>("dynamic_tile_cache");
+            system_canvases = system_database.GetCollection<DbCanvas>("canvases");
+            system_user_uploads = system_database.GetCollection<DbUserContent>("user_uploads");
+            system_sync_states = system_database.GetCollection<DbSyncSavedState>("sync_states");
 
             //Set up Google Firebase
             if(config.firebase_config != null)
@@ -134,10 +141,71 @@ namespace LibDeltaSystem
             //Create a new RPC if needed
             if(_rpc == null)
             {
-                _rpc = new DeltaRPCConnection(this);
-                _rpc.Init();
+                _rpc = new DeltaRPCConnection(this, Convert.FromBase64String(config.rpc_key), new System.Net.IPEndPoint(System.Net.IPAddress.Parse(config.rpc_ip), config.rpc_port));
+                _rpc.Connect();
             }
             return _rpc;
+        }
+        
+        /// <summary>
+        /// Only set after GetStructureMetadata is called
+        /// </summary>
+        private List<StructureMetadata> _structureMetadatas;
+
+        /// <summary>
+        /// Only set after GetStructureMetadata is called
+        /// </summary>
+        private List<string> _supportedStructureMetadatas;
+
+        /// <summary>
+        /// Gets an RPC connection. This can be used to get the RPC object anytime
+        /// </summary>
+        /// <returns></returns>
+        public List<StructureMetadata> GetStructureMetadata()
+        {
+            //Create a new RPC if needed
+            if(_structureMetadatas == null)
+            {
+                _structureMetadatas = JsonConvert.DeserializeObject<List<StructureMetadata>>(File.ReadAllText(config.structure_metadata_config));
+                _supportedStructureMetadatas = new List<string>();
+                foreach (var s in _structureMetadatas)
+                    _supportedStructureMetadatas.AddRange(s.names);
+            }
+            return _structureMetadatas;
+        }
+
+        /// <summary>
+        /// Gets a user content entry by it's token
+        /// </summary>
+        /// <param name="token"></param>
+        /// <returns></returns>
+        public async Task<DbUserContent> GetUserContentByToken(string token)
+        {
+            var filterBuilder = Builders<DbUserContent>.Filter;
+            var filter = filterBuilder.Eq("token", token);
+            var result = await system_user_uploads.FindAsync(filter);
+            DbUserContent c = await result.FirstOrDefaultAsync();
+            if (c == null)
+                return null;
+            c.conn = this;
+            return c;
+        }
+
+        /// <summary>
+        /// Gets a user content entry by it's name
+        /// </summary>
+        /// <param name="token"></param>
+        /// <returns></returns>
+        public async Task<DbUserContent> GetUserContentByName(string name)
+        {
+            var filterBuilder = Builders<DbUserContent>.Filter;
+            var filter = filterBuilder.Eq("name", name);
+            var result = await system_user_uploads.FindAsync(filter);
+            DbUserContent c = await result.FirstOrDefaultAsync();
+            if (c == null)
+                return null;
+            c.conn = this;
+            return c;
         }
 
         /// <summary>
@@ -178,6 +246,23 @@ namespace LibDeltaSystem
         }
 
         /// <summary>
+        /// Loads canvas data
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        public async Task<DbCanvas> LoadCanvasData(ObjectId id)
+        {
+            var filterBuilder = Builders<DbCanvas>.Filter;
+            var filter = filterBuilder.Eq("_id", id);
+            var result = await system_canvases.FindAsync(filter);
+            DbCanvas c = await result.FirstOrDefaultAsync();
+            if (c == null)
+                return null;
+            c.conn = this;
+            return c;
+        }
+
+        /// <summary>
         /// Fetches saved dino/tribe data. Will never return null
         /// </summary>
         /// <param name="serverId"></param>
@@ -207,6 +292,50 @@ namespace LibDeltaSystem
         public IMongoCollection<T> GetContentCollection<T>(string name)
         {
             return content_database.GetCollection<T>(name);
+        }
+
+        /// <summary>
+        /// Gets structures
+        /// </summary>
+        /// <param name="target"></param>
+        /// <param name="tile"></param>
+        /// <returns></returns>
+        public async Task<List<DbStructure>> GetStructuresInRange(TileData tile, string server_id, int tribe_id, float tolerance_additive = 0)
+        {
+            //Make sure structures are up to date
+            GetStructureMetadata();
+
+            //Commit query
+            var filterBuilder = Builders<DbStructure>.Filter;
+            var filter = filterBuilder.Eq("server_id", server_id) &
+                filterBuilder.Eq("tribe_id", tribe_id) &
+                filterBuilder.In("classname", _supportedStructureMetadatas) &
+                filterBuilder.Gt("location.x", tile.game_min_x - tolerance_additive) &
+                filterBuilder.Lt("location.x", tile.game_max_x + tolerance_additive) &
+                filterBuilder.Gt("location.y", tile.game_min_y - tolerance_additive) &
+                filterBuilder.Lt("location.y", tile.game_max_y + tolerance_additive);
+            var results = await content_structures.FindAsync(filter);
+            return await results.ToListAsync();
+        }
+
+        /// <summary>
+        /// Gets all tribe structures
+        /// </summary>
+        /// <param name="target"></param>
+        /// <param name="tile"></param>
+        /// <returns></returns>
+        public async Task<List<DbStructure>> GetTribeStructures(string server_id, int tribe_id)
+        {
+            //Make sure structures are up to date
+            GetStructureMetadata();
+
+            //Commit query
+            var filterBuilder = Builders<DbStructure>.Filter;
+            var filter = filterBuilder.Eq("server_id", server_id) &
+                filterBuilder.Eq("tribe_id", tribe_id) &
+                filterBuilder.In("classname", _supportedStructureMetadatas);
+            var results = await content_structures.FindAsync(filter);
+            return await results.ToListAsync();
         }
 
         /// <summary>

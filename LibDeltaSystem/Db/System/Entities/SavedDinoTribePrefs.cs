@@ -10,5 +10,10 @@ namespace LibDeltaSystem.Db.System.Entities
         /// The color tag. Appears next to the dinosaur on the map, and is just a label. Can be null
         /// </summary>
         public string color_tag { get; set; }
+
+        /// <summary>
+        /// User defined note
+        /// </summary>
+        public string note { get; set; } = "";
     }
 }

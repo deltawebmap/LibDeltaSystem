@@ -90,6 +90,21 @@ namespace LibDeltaSystem.Tools.InternalComms
         /// </summary>
         public bool is_server;
 
+        /// <summary>
+        /// The outbound message queue for messages sent before we're authenticated (or if sent when the connection was closed)
+        /// </summary>
+        public ConcurrentQueue<Tuple<int, Dictionary<string, byte[]>>> authOutgoingQueue;
+
+        /// <summary>
+        /// Messages that we got before auth was completed. Sent when we authenticate
+        /// </summary>
+        public ConcurrentQueue<Tuple<int, Dictionary<string, byte[]>>> authIncomingQueue;
+
+        /// <summary>
+        /// Thread that processes in the background
+        /// </summary>
+        private Thread sendThread;
+
         public InternalCommBase(DeltaConnection conn, byte[] key, bool is_server)
         {
             this.conn = conn;
@@ -97,6 +112,8 @@ namespace LibDeltaSystem.Tools.InternalComms
             this.salt = new byte[32];
             this.receive_chunk_buffer = new Dictionary<string, byte[]>();
             this.is_server = is_server;
+            this.authIncomingQueue = new ConcurrentQueue<Tuple<int, Dictionary<string, byte[]>>>();
+            this.authOutgoingQueue = new ConcurrentQueue<Tuple<int, Dictionary<string, byte[]>>>();
         }
 
         /// <summary>
@@ -128,6 +145,14 @@ namespace LibDeltaSystem.Tools.InternalComms
 
         public void InternalOnDisconnect(string reason = null)
         {
+            //Log
+            Log("InternalOnDisconnect", "Reason: " + reason);
+
+            //Set flags
+            authenticated = false;
+            salt_valid = false;
+
+            //Send events
             OnDisconnect(reason);
         }
 
@@ -161,8 +186,12 @@ namespace LibDeltaSystem.Tools.InternalComms
                 //Log
                 Log("OnReceiveMessageHeader", $"Received Message Header; Got {received} bytes, {offset}/{receive_buffer.Length} bytes; Connected: {sock.Connected}");
 
+                //If we received 0, stop
+                if(received == 0)
+                    InternalOnDisconnect("Received 0 bytes; closing connection!");
+
                 //Check if we need to download more data
-                if (received + offset < receive_buffer.Length)
+                if (offset < receive_buffer.Length)
                 {
                     sock.BeginReceive(receive_buffer, offset, receive_buffer.Length - offset, SocketFlags.None, OnReceiveMessageHeader, offset);
                     return;
@@ -234,8 +263,12 @@ namespace LibDeltaSystem.Tools.InternalComms
                 //Log
                 Log("OnReceiveMessageChunk", $"Received Message Chunk; Got {received} bytes, {offset}/{receive_buffer.Length} bytes");
 
+                //If we received 0, stop
+                if (received == 0)
+                    InternalOnDisconnect("Received 0 bytes; closing connection!");
+
                 //Check if we need to download more data
-                if (received + offset < receive_buffer.Length)
+                if (offset < receive_buffer.Length)
                 {
                     sock.BeginReceive(receive_buffer, offset, receive_buffer.Length - offset, SocketFlags.None, OnReceiveMessageChunk, offset);
                     return;
@@ -322,8 +355,7 @@ namespace LibDeltaSystem.Tools.InternalComms
                         throw new Exception("HMAC sent did not match the intended HMAC.");
 
                     //We trust the client. Send the client a message so that they can trust us
-                    authenticated = true;
-                    OnAuthorized();
+                    InternalOnAuthorized();
                     connected_party_name = Encoding.UTF8.GetString(receive_chunk_buffer["CLIENT_NAME"]);
                     RawSendMessage(-3, new Dictionary<string, byte[]>
                     {
@@ -350,8 +382,7 @@ namespace LibDeltaSystem.Tools.InternalComms
                         throw new Exception("HMAC sent did not match the intended HMAC.");
 
                     //We trust the client
-                    authenticated = true;
-                    OnAuthorized();
+                    InternalOnAuthorized();
                     connected_party_name = Encoding.UTF8.GetString(receive_chunk_buffer["CLIENT_NAME"]);
 
                     //Log
@@ -359,8 +390,11 @@ namespace LibDeltaSystem.Tools.InternalComms
                 }
             } else
             {
-                //Run subscribed message
-                HandleMessage(receive_chunk_opcode, new Dictionary<string, byte[]>(receive_chunk_buffer));
+                //Make sure that we are authenticated before sending this
+                if (authenticated)
+                    HandleMessage(receive_chunk_opcode, new Dictionary<string, byte[]>(receive_chunk_buffer));
+                else
+                    authIncomingQueue.Enqueue(new Tuple<int, Dictionary<string, byte[]>>(receive_chunk_opcode, new Dictionary<string, byte[]>(receive_chunk_buffer)));
             }
 
             //Listen for next message
@@ -376,6 +410,31 @@ namespace LibDeltaSystem.Tools.InternalComms
         public abstract Task HandleMessage(int opcode, Dictionary<string, byte[]> payloads);
 
         /// <summary>
+        /// Called internally when we are authorized
+        /// </summary>
+        private void InternalOnAuthorized()
+        {
+            //Set flags
+            authenticated = true;
+
+            //Empty outgoing queue
+            Tuple<int, Dictionary<string, byte[]>> data;
+            while (authIncomingQueue.TryDequeue(out data))
+            {
+                HandleMessage(data.Item1, data.Item2).GetAwaiter().GetResult();
+            }
+
+            //Empty incoming queue
+            while (authOutgoingQueue.TryDequeue(out data))
+            {
+                RawSendMessage(data.Item1, data.Item2);
+            }
+
+            //Call next on authorized
+            OnAuthorized();
+        }
+
+        /// <summary>
         /// Called when we have been authorized
         /// </summary>
         public abstract void OnAuthorized();
@@ -387,6 +446,13 @@ namespace LibDeltaSystem.Tools.InternalComms
         /// <param name="payloads"></param>
         public void RawSendMessage(int opcode, Dictionary<string, byte[]> payloads)
         {
+            //If we're not authenticated yet, add this to the queue
+            if(!authenticated && opcode >= 0)
+            {
+                authOutgoingQueue.Enqueue(new Tuple<int, Dictionary<string, byte[]>>(opcode, payloads));
+                return;
+            }
+
             try
             {
                 //Allocate space for the message
@@ -408,7 +474,8 @@ namespace LibDeltaSystem.Tools.InternalComms
                 BinaryTool.WriteInt32(buffer, 36, Encoding.ASCII.GetByteCount(payloadsList[0].Item1) + payloadsList[0].Item2.Length);
 
                 //Calculate HMAC of the header and set it
-                Array.Copy(CalculateHMAC(buffer, HEADER_SIZE - 32, 32), 0, buffer, 0, 32);
+                byte[] hmac = CalculateHMAC(buffer, HEADER_SIZE - 32, 32);
+                Array.Copy(hmac, 0, buffer, 0, 32);
 
                 //Write each chunk
                 int offset = HEADER_SIZE;
