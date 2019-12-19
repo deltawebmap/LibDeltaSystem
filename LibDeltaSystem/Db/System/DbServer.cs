@@ -1,5 +1,6 @@
 ﻿using LibDeltaSystem.Db.Content;
 using LibDeltaSystem.Db.System.Entities;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
@@ -30,11 +31,6 @@ namespace LibDeltaSystem.Db.System
         /// The machine this is connected to. Can be null if created using the mods.
         /// </summary>
         public string machine_uid { get; set; }
-
-        /// <summary>
-        /// The settings used to load the map data.
-        /// </summary>
-        public DbServer_LoadSettings load_settings { get; set; }
 
         /// <summary>
         /// ID of the owner of the server
@@ -72,9 +68,21 @@ namespace LibDeltaSystem.Db.System
         public string[] mods { get; set; }
 
         /// <summary>
-        /// Files for echo sync
+        /// Lock flags, in terms of bits. 0 if OK to load
+        /// https://docs.google.com/spreadsheets/d/1zQ_r86uyDAvwAtEg0135rL6g2lHqhPtYAgFdJrL3vZc/edit?folder=0AOcXNqRr5p22Uk9PVA#gid=242769975 (only lower bits are used)
         /// </summary>
-        public List<ServerEchoUploadedFile> echo_files { get; set; }
+        public uint lock_flags { get; set; }
+
+        /// <summary>
+        /// Permissions, in terms of bits.
+        /// https://docs.google.com/spreadsheets/d/1zQ_r86uyDAvwAtEg0135rL6g2lHqhPtYAgFdJrL3vZc/edit?folder=0AOcXNqRr5p22Uk9PVA#gid=0
+        /// </summary>
+        public ulong permission_flags { get; set; }
+
+        /// <summary>
+        /// Is this server a PVP server?
+        /// </summary>
+        public bool is_pvp { get; set; }
 
         /// <summary>
         /// Revision ID for dinos
@@ -85,6 +93,77 @@ namespace LibDeltaSystem.Db.System
         /// Revision ID for structures
         /// </summary>
         public int revision_id_structures { get; set; }
+
+        /// <summary>
+        /// Multiplier for how quickly events are sent from the ARK server. Requires reboot. 1 is default. Increase for larger servers
+        /// </summary>
+        public float update_speed_multiplier { get; set; } = 1;
+
+        /// <summary>
+        /// Checks a permission flag at a bit index
+        /// </summary>
+        /// <param name="index"></param>
+        /// <returns></returns>
+        public bool CheckPermissionFlag(int index)
+        {
+            return ((permission_flags >> index) & 1U) == 1;
+        }
+
+        /// <summary>
+        /// Checks a lock flag at a bit index
+        /// </summary>
+        /// <param name="index"></param>
+        /// <returns></returns>
+        public bool CheckLockFlag(int index)
+        {
+            return ((lock_flags >> index) & 1U) == 1;
+        }
+
+        /// <summary>
+        /// Returns all permission flags as an array of bools
+        /// </summary>
+        /// <returns></returns>
+        public bool[] GetPermissionFlagList()
+        {
+            bool[] response = new bool[64];
+            for (int i = 0; i < response.Length; i++)
+                response[i] = CheckPermissionFlag(i);
+            return response;
+        }
+
+        /// <summary>
+        /// Updates the listed permission flags.
+        /// </summary>
+        /// <param name="points"></param>
+        /// <returns></returns>
+        public void SetPermissionFlags(bool[] points)
+        {
+            //Verify
+            if (points.Length != 64)
+                throw new Exception("Points array length does not match 64.");
+
+            //Set
+            for (int i = 0; i < 64; i++)
+            {
+                ulong value = 0;
+                if (points[i])
+                    value = 1;
+                permission_flags |= ((value >> 0) & 1) << i;
+            }
+        }
+
+        /// <summary>
+        /// Sets a lock flag, but DOES NOT SAVE
+        /// </summary>
+        /// <param name="index"></param>
+        /// <param name="flag"></param>
+        public void SetLockFlag(int index, bool flag)
+        {
+            uint value = 0;
+            if (flag)
+                value = 1;
+            lock_flags |= ((value >> 0) & 1) << index;
+        }
 
         /// <summary>
         /// Updates this in the database
@@ -255,6 +334,33 @@ namespace LibDeltaSystem.Db.System
         public bool IsUserAdmin(DbUser user)
         {
             return owner_uid == user.id;
+        }
+
+        /// <summary>
+        /// Gets user prefs for a saved user
+        /// </summary>
+        /// <param name="user_id"></param>
+        /// <returns></returns>
+        public async Task<SavedUserServerPrefs> GetUserPrefs(string user_id)
+        {
+            var filterBuilder = Builders<DbSavedUserServerPrefs>.Filter;
+            var filter = filterBuilder.Eq("server_id", id) & filterBuilder.Eq("user_id", user_id);
+            var results = conn.system_saved_user_server_prefs.Find(filter).FirstOrDefault();
+            if (results != null)
+            {
+                return results.payload;
+            }
+            else
+            {
+                return new SavedUserServerPrefs
+                {
+                    x = 128,
+                    y = -128,
+                    z = 2,
+                    map = 0,
+                    drawable_map = null
+                };
+            }
         }
     }
 

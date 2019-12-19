@@ -15,5 +15,8 @@ namespace LibDeltaSystem.Db.System.Entities
 
         public string canvas_id { get; set; }
         public int canvas_brush_color { get; set; } = 5;
+
+        public bool is_hidden { get; set; } = false;
+        public string last_message_hash { get; set; } = null; //Used to dissmiss messages that appear
     }
 }

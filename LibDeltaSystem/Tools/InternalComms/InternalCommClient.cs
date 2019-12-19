@@ -86,7 +86,6 @@ namespace LibDeltaSystem.Tools.InternalComms
         {
             //Log
             Log("OnConnectFailed", "Connection failed. Retrying...");
-            Console.WriteLine(connectTimeout.Enabled);
 
             //Stop timer
             connectTimeout.Stop();

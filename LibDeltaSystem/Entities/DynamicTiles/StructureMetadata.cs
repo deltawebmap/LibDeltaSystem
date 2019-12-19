@@ -9,5 +9,6 @@ namespace LibDeltaSystem.Entities.DynamicTiles
         public string[] names;
         public string img;
         public float size;
+        public string item; //Classname of the item used to place this
     }
 }

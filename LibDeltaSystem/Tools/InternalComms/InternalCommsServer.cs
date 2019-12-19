@@ -103,6 +103,13 @@ namespace LibDeltaSystem.Tools.InternalComms
             /// <param name="reason"></param>
             public override void OnDisconnect(string reason = null)
             {
+                //Attempt to close connection
+                try
+                {
+                    sock.Close();
+                } catch { }
+
+                //Call parent
                 server.OnClientDisconnected(this);
             }
         }

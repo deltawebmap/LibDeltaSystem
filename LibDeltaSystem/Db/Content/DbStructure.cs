@@ -1,6 +1,11 @@
-﻿using System;
+﻿using LibDeltaSystem.Db.System;
+using LibDeltaSystem.Entities.ArkEntries.Dinosaur;
+using MongoDB.Driver;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace LibDeltaSystem.Db.Content
 {
@@ -50,5 +55,40 @@ namespace LibDeltaSystem.Db.Content
         /// Used for version control
         /// </summary>
         public int revision_id { get; set; }
+
+        /// <summary>
+        /// Custom name set for this, if added
+        /// </summary>
+        public string custom_name { get; set; }
+
+        /// <summary>
+        /// Gets a structure by it's ID from a server
+        /// </summary>
+        /// <param name="token"></param>
+        /// <param name="server"></param>
+        /// <returns></returns>
+        public static async Task<DbStructure> GetStructureByID(DeltaConnection conn, int token, DbServer server)
+        {
+            var filterBuilder = Builders<DbStructure>.Filter;
+            var filter = filterBuilder.Eq("structure_id", token);
+            var response = await server.conn.content_structures.FindAsync(filter);
+            var structure = await response.FirstOrDefaultAsync();
+            return structure;
+        }
+
+        public bool TryGetItemEntry(DeltaConnection conn, DeltaPrimalDataPackage package, out ItemEntry entry)
+        {
+            entry = null;
+            
+            //Lookup structure metadata
+            var metadata = conn.GetStructureMetadata().Where(x => x.names.Contains(classname)).FirstOrDefault();
+            if (metadata != null)
+            {
+                //Get the item used for this
+                entry = package.GetItemEntry(metadata.item);
+                return entry != null;
+            }
+            return false;
+        }
     }
 }

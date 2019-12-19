@@ -25,6 +25,11 @@ namespace LibDeltaSystem.Db.System
         public int mod_version { get; set; }
 
         /// <summary>
+        /// The mod enviornment. Usually PRODUCTION
+        /// </summary>
+        public string mod_enviornment { get; set; }
+
+        /// <summary>
         /// The ID of the server this is connected to
         /// </summary>
         public string server_id { get; set; }

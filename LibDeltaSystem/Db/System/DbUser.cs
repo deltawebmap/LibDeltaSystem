@@ -43,11 +43,45 @@ namespace LibDeltaSystem.Db.System
         public List<string> notification_tokens { get; set; }
 
         /// <summary>
+        /// Token used for server creation
+        /// </summary>
+        public string server_creation_token { get; set; }
+
+        /// <summary>
+        /// Token that was used to authenticate this user
+        /// </summary>
+        [BsonIgnore]
+        private DbToken _token { get; set; }
+
+        /// <summary>
         /// Updates this in the database
         /// </summary>
         public void Update()
         {
             UpdateAsync().GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// Gets the token used to authenticate this user
+        /// </summary>
+        /// <returns></returns>
+        public DbToken GetAuthenticatedToken()
+        {
+            return _token;
+        }
+
+        /// <summary>
+        /// Generates the server creation token
+        /// </summary>
+        /// <returns></returns>
+        public async Task<string> GetServerCreationToken()
+        {
+            if (server_creation_token == null)
+            {
+                server_creation_token = Tools.SecureStringTool.GenerateSecureString(44);
+                await UpdateAsync();
+            }
+            return server_creation_token;
         }
 
         /// <summary>
@@ -144,7 +178,7 @@ namespace LibDeltaSystem.Db.System
         {
             //Generate a unique string
             string token = Tools.SecureStringTool.GenerateSecureString(64);
-            while(conn.AuthenticateUserToken(token).GetAwaiter().GetResult() != null)
+            while(await conn.AuthenticateUserToken(token) != null)
                 token = Tools.SecureStringTool.GenerateSecureString(64);
 
             //Now, create a token object
@@ -164,6 +198,42 @@ namespace LibDeltaSystem.Db.System
         }
 
         /// <summary>
+        /// Generates a random token
+        /// </summary>
+        /// <returns></returns>
+        public async Task<DbToken> MakeOAuthToken(DbOauthApp app, string[] scopes)
+        {
+            //Generate a unique string
+            string token = Tools.SecureStringTool.GenerateSecureString(64);
+            while (await conn.AuthenticateUserToken(token) != null)
+                token = Tools.SecureStringTool.GenerateSecureString(64);
+
+            //Generate a unique prefight token
+            string preflight = Tools.SecureStringTool.GenerateSecureString(64);
+            while (await conn.GetTokenByPreflightAsync(preflight) != null)
+                preflight = Tools.SecureStringTool.GenerateSecureString(64);
+
+            //Now, create a token object
+            DbToken t = new DbToken
+            {
+                created_utc = DateTime.UtcNow.Ticks,
+                token = token,
+                user_id = id,
+                _id = MongoDB.Bson.ObjectId.GenerateNewId(),
+                is_oauth = true,
+                oauth_client_id = app.client_id,
+                oauth_preflight = preflight,
+                oauth_scopes = scopes
+            };
+
+            //Insert
+            await conn.system_tokens.InsertOneAsync(t);
+
+            //Return string
+            return t;
+        }
+
+        /// <summary>
         /// Finds and devalidates all tokens belonging to this user.
         /// </summary>
         /// <returns></returns>
@@ -175,6 +245,55 @@ namespace LibDeltaSystem.Db.System
             var results = await conn.system_tokens.DeleteManyAsync(filter);
 
             return results.DeletedCount;
+        }
+
+        /// <summary>
+        /// Gets a user by their Steam ID. If the user doesn't exist, one is created
+        /// </summary>
+        /// <returns></returns>
+        public static async Task<DbUser> GetUserBySteamID(DeltaConnection conn, DbSteamCache profile)
+        {
+            //Get user. If a user account isn't created yet, make one.
+            DbUser user = await conn.GetUserBySteamIdAsync(profile.steam_id);
+            if (user == null)
+            {
+                //Create the user
+                user = new DbUser
+                {
+                    user_settings = new DbUserSettings(),
+                    profile_image_url = profile.icon_url,
+                    steam_profile_url = profile.profile_url,
+                    screen_name = profile.name,
+                    steam_id = profile.steam_id,
+                    _id = MongoDB.Bson.ObjectId.GenerateNewId(),
+                    conn = conn
+                };
+
+                //Insert in the database
+                await conn.system_users.InsertOneAsync(user);
+            }
+            return user;
+        }
+
+        /// <summary>
+        /// Authenticates a user using their token
+        /// </summary>
+        /// <param name="conn"></param>
+        /// <param name="token"></param>
+        /// <returns></returns>
+        public static async Task<DbUser> AuthenticateUserToken(DeltaConnection conn, string token)
+        {
+            //First, get our token object
+            DbToken tok = await conn.GetTokenByTokenAsync(token);
+            if (tok == null)
+                return null;
+
+            //Now, get our user
+            var u = await conn.GetUserByIdAsync(tok.user_id);
+            if (u == null)
+                return null;
+            u._token = tok;
+            return u;
         }
     }
 }

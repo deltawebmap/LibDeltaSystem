@@ -30,6 +30,7 @@ namespace LibDeltaSystem
         public IMongoCollection<DbPlayerProfile> content_player_profiles;
         public IMongoCollection<DbStructure> content_structures;
         public IMongoCollection<DbTribeLogEntry> content_tribe_log;
+        public IMongoCollection<DbEgg> content_eggs;
 
         public IMongoCollection<DbUser> system_users;
         public IMongoCollection<DbToken> system_tokens;
@@ -45,6 +46,8 @@ namespace LibDeltaSystem
         public IMongoCollection<DbCanvas> system_canvases;
         public IMongoCollection<DbUserContent> system_user_uploads;
         public IMongoCollection<DbSyncSavedState> system_sync_states;
+        public IMongoCollection<DbOauthApp> system_oauth_apps;
+        public IMongoCollection<DbCluster> system_clusters;
 
         public DeltaConnectionConfig config;
 
@@ -53,6 +56,8 @@ namespace LibDeltaSystem
         public string system_name;
         public int system_version_minor;
         public int system_version_major;
+
+        public bool debug_mode { get { return config.debug_mode; } }
 
         public DeltaConnection(string pathname, string system_name, int system_version_major, int system_version_minor)
         {
@@ -90,7 +95,7 @@ namespace LibDeltaSystem
         {
             //Set up database
             content_client = new MongoClient(
-                $"mongodb://{config.user}:{config.key}@{config.server_ip}:{config.server_port}"
+                config.mongodb_connection
             );
 
             content_database = content_client.GetDatabase("delta-"+config.env);
@@ -100,6 +105,7 @@ namespace LibDeltaSystem
             content_player_profiles = content_database.GetCollection<DbPlayerProfile>("player_profiles");
             content_structures = content_database.GetCollection<DbStructure>("structures");
             content_tribe_log = content_database.GetCollection<DbTribeLogEntry>("tribe_log_entries");
+            content_eggs = content_database.GetCollection<DbEgg>("eggs");
 
             system_database = content_client.GetDatabase("delta-system-"+config.env);
             system_users = system_database.GetCollection<DbUser>("users");
@@ -116,6 +122,8 @@ namespace LibDeltaSystem
             system_canvases = system_database.GetCollection<DbCanvas>("canvases");
             system_user_uploads = system_database.GetCollection<DbUserContent>("user_uploads");
             system_sync_states = system_database.GetCollection<DbSyncSavedState>("sync_states");
+            system_oauth_apps = system_database.GetCollection<DbOauthApp>("oauth_apps");
+            system_clusters = system_database.GetCollection<DbCluster>("clusters");
 
             //Set up Google Firebase
             if(config.firebase_config != null)
@@ -172,6 +180,23 @@ namespace LibDeltaSystem
                     _supportedStructureMetadatas.AddRange(s.names);
             }
             return _structureMetadatas;
+        }
+
+        /// <summary>
+        /// Gets a user content entry by it's token
+        /// </summary>
+        /// <param name="token"></param>
+        /// <returns></returns>
+        public async Task<DbOauthApp> GetOAuthAppByAppID(string id)
+        {
+            var filterBuilder = Builders<DbOauthApp>.Filter;
+            var filter = filterBuilder.Eq("client_id", id);
+            var result = await system_oauth_apps.FindAsync(filter);
+            DbOauthApp c = await result.FirstOrDefaultAsync();
+            if (c == null)
+                return null;
+            c.conn = this;
+            return c;
         }
 
         /// <summary>
@@ -566,6 +591,30 @@ namespace LibDeltaSystem
         }
 
         /// <summary>
+        /// Returns a server by their ID
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        public async Task<List<DbServer>> GetServersByOwnerAsync(string id)
+        {
+            //Check if null
+            if (id == null)
+                return new List<DbServer>();
+            
+            //Fetch
+            var filterBuilder = Builders<DbServer>.Filter;
+            var filter = filterBuilder.Eq("owner_uid", id);
+            var results = await system_servers.FindAsync(filter);
+            var r = await results.ToListAsync();
+
+            //Add props
+            foreach (var rr in r)
+                rr.conn = this;
+
+            return r;
+        }
+
+        /// <summary>
         /// Returns a server by it's ID. Returns null if not found.
         /// </summary>
         /// <param name="id"></param>
@@ -659,19 +708,62 @@ namespace LibDeltaSystem
         }
 
         /// <summary>
+        /// Returns a token object from the token string
+        /// </summary>
+        /// <param name="token"></param>
+        /// <returns></returns>
+        public async Task<DbUser> GetUserByServerSetupToken(string token)
+        {
+            if (token == null)
+                return null;
+            
+            //Find
+            var filterBuilder = Builders<DbUser>.Filter;
+            var filter = filterBuilder.Eq("server_creation_token", token);
+            var results = await system_users.FindAsync(filter);
+            var r = await results.FirstOrDefaultAsync();
+            if (r == null)
+                return null;
+
+            //Set conn
+            r.conn = this;
+
+            return r;
+        }
+
+        /// <summary>
+        /// Returns a token object from the token string
+        /// </summary>
+        /// <param name="token"></param>
+        /// <returns></returns>
+        public async Task<DbToken> GetTokenByPreflightAsync(string token)
+        {
+            //Make sure that a token is set
+            if (token == null)
+                return null;
+            
+            //Find
+            var filterBuilder = Builders<DbToken>.Filter;
+            var filter = filterBuilder.Eq("oauth_preflight", token);
+            var results = await system_tokens.FindAsync(filter);
+            var r = await results.FirstOrDefaultAsync();
+            if (r == null)
+                return null;
+
+            //Set conn
+            r.conn = this;
+
+            return r;
+        }
+
+        /// <summary>
         /// Authenticates a user with a token
         /// </summary>
         /// <param name="token"></param>
         /// <returns></returns>
         public async Task<DbUser> AuthenticateUserToken(string token)
         {
-            //First, get our token object
-            DbToken tok = await GetTokenByTokenAsync(token);
-            if (tok == null)
-                return null;
-
-            //Now, get our user
-            return await GetUserByIdAsync(tok.user_id);
+            return await DbUser.AuthenticateUserToken(this, token);
         }
 
         /// <summary>

@@ -123,7 +123,8 @@ namespace LibDeltaSystem.Tools.InternalComms
         /// <param name="msg"></param>
         public void Log(string topic, string msg)
         {
-            Console.WriteLine($"[{topic}] -> {msg}");
+            if(conn.debug_mode)
+                Console.WriteLine($"[{topic}] -> {msg}");
         }
 
         /// <summary>
@@ -265,7 +266,10 @@ namespace LibDeltaSystem.Tools.InternalComms
 
                 //If we received 0, stop
                 if (received == 0)
+                {
                     InternalOnDisconnect("Received 0 bytes; closing connection!");
+                    return;
+                }
 
                 //Check if we need to download more data
                 if (offset < receive_buffer.Length)

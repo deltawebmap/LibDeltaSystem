@@ -1,5 +1,7 @@
-﻿using LibDeltaSystem.Db.System.Entities;
+﻿using LibDeltaSystem.Db.System;
+using LibDeltaSystem.Db.System.Entities;
 using MongoDB.Bson.Serialization.Attributes;
+using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -127,6 +129,21 @@ namespace LibDeltaSystem.Db.Content
         public async Task<SavedDinoTribePrefs> GetPrefs(DeltaConnection conn)
         {
             return await conn.GetDinoPrefs(server_id, tribe_id, dino_id);
+        }
+
+        /// <summary>
+        /// Gets a dinosaur by it's ID from a server
+        /// </summary>
+        /// <param name="token"></param>
+        /// <param name="server"></param>
+        /// <returns></returns>
+        public static async Task<DbDino> GetDinosaurByID(DeltaConnection conn, ulong token, DbServer server)
+        {
+            var filterBuilder = Builders<DbDino>.Filter;
+            var filter = filterBuilder.Eq("dino_id", token) & filterBuilder.Eq("server_id", server.id);
+            var response = await server.conn.content_dinos.FindAsync(filter);
+            var dino = await response.FirstOrDefaultAsync();
+            return dino;
         }
     }
 }
