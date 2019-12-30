@@ -6,10 +6,9 @@ namespace LibDeltaSystem.Entities.ArkEntries.Dinosaur
 {
     public class ItemEntry
     {
-        public string classname;
+        public string classname { get; set; }
 
-        public DeltaAsset icon;
-        public DeltaAsset broken_icon;
+        public DeltaAsset icon { get; set; }
 
         public bool hideFromInventoryDisplay { get; set; }
         public bool useItemDurability { get; set; }
@@ -25,7 +24,7 @@ namespace LibDeltaSystem.Entities.ArkEntries.Dinosaur
         public int maxItemQuantity { get; set; }
 
         //Consumables
-        public Dictionary<string, ItemEntry_ConsumableAddStatusValue> addStatusValues;
+        public Dictionary<string, ItemEntry_ConsumableAddStatusValue> addStatusValues { get; set; }
     }
 
     public class ItemEntry_ConsumableAddStatusValue
@@ -40,6 +39,6 @@ namespace LibDeltaSystem.Entities.ArkEntries.Dinosaur
         public float addOverTimeSpeed { get; set; }
         public float itemQualityAddValueMultiplier { get; set; }
 
-        public string statusValueType; //Enum
+        public string statusValueType { get; set; }
     }
 }

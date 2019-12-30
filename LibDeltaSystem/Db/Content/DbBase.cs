@@ -30,17 +30,5 @@ namespace LibDeltaSystem.Db.Content
         /// </summary>
         [JsonIgnore]
         public int tribe_id { get; set; }
-
-        /// <summary>
-        /// Version control. Unique to each server and used to overwrite and remove values
-        /// </summary>
-        [JsonIgnore]
-        public string token { get; set; }
-
-        /// <summary>
-        /// More version control
-        /// </summary>
-        [JsonIgnore]
-        public string hash { get; set; }
     }
 }

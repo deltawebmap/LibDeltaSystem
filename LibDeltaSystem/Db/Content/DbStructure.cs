@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace LibDeltaSystem.Db.Content
 {
-    public class DbStructure : DbContentBase
+    public class DbStructure : DbRevisionMappedContentBase
     {
         /// <summary>
         /// The location of this dinosaur
@@ -49,12 +49,7 @@ namespace LibDeltaSystem.Db.Content
         /// <summary>
         /// Unique ID for this structure
         /// </summary>
-        public int structure_id { get; set; }
-
-        /// <summary>
-        /// Used for version control
-        /// </summary>
-        public int revision_id { get; set; }
+        public int structure_id { get; set; }        
 
         /// <summary>
         /// Custom name set for this, if added
@@ -74,6 +69,22 @@ namespace LibDeltaSystem.Db.Content
             var response = await server.conn.content_structures.FindAsync(filter);
             var structure = await response.FirstOrDefaultAsync();
             return structure;
+        }
+
+        /// <summary>
+        /// Fetches items belonging to this structure
+        /// </summary>
+        /// <param name="dino"></param>
+        /// <param name="server"></param>
+        /// <param name="tribeId"></param>
+        /// <returns></returns>
+        public async Task<List<DbItem>> GetItems(DbServer server, int tribeId)
+        {
+            var filterBuilder = Builders<DbItem>.Filter;
+            var filter = filterBuilder.Eq("server_id", server.id) & filterBuilder.Eq("tribe_id", tribeId) & filterBuilder.Eq("parent_id", structure_id.ToString()) & filterBuilder.Eq("parent_type", DbInventoryParentType.Structure);
+            var response = await server.conn.content_items.FindAsync(filter);
+            var items = await response.ToListAsync();
+            return items;
         }
 
         public bool TryGetItemEntry(DeltaConnection conn, DeltaPrimalDataPackage package, out ItemEntry entry)

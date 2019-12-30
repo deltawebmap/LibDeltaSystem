@@ -6,32 +6,30 @@ namespace LibDeltaSystem.Entities.ArkEntries.Dinosaur
 {
     public class DinosaurEntry
     {
-        public string screen_name;
-        public float colorizationIntensity;
-        public float babyGestationSpeed;
-        public float extraBabyGestationSpeedMultiplier;
-        public float babyAgeSpeed;
-        public float extraBabyAgeSpeedMultiplier;
-        public bool useBabyGestation;
-        public float extraBabyAgeMultiplier;
+        public string screen_name { get; set; }
+        public float colorizationIntensity { get; set; }
+        public float babyGestationSpeed { get; set; }
+        public float extraBabyGestationSpeedMultiplier { get; set; }
+        public float babyAgeSpeed { get; set; }
+        public float extraBabyAgeSpeedMultiplier { get; set; }
+        public bool useBabyGestation { get; set; }
+        public float extraBabyAgeMultiplier { get; set; }
 
-        public DinosaurEntryStatusComponent statusComponent;
+        public DinosaurEntryStatusComponent statusComponent { get; set; }
 
-        public List<DinosaurEntryFood> adultFoods;
-        public List<DinosaurEntryFood> childFoods;
+        public List<DinosaurEntryFood> adultFoods { get; set; }
+        public List<DinosaurEntryFood> childFoods { get; set; }
 
-        public string classname;
+        public string classname { get; set; }
 
-        public DeltaAsset icon;
+        public DeltaAsset icon { get; set; }
 
-        public float[] baseLevel;
-        public float[] increasePerWildLevel;
-        public float[] increasePerTamedLevel;
-        public float[] additiveTamingBonus;
-        public float[] multiplicativeTamingBonus;
-        public float[] statImprintMult; //DinoMaxStatAddMultiplierImprinting
-
-        public int version;
+        public float[] baseLevel { get; set; }
+        public float[] increasePerWildLevel { get; set; }
+        public float[] increasePerTamedLevel { get; set; }
+        public float[] additiveTamingBonus { get; set; }
+        public float[] multiplicativeTamingBonus { get; set; }
+        public float[] statImprintMult { get; set; }
 
         private const double ROUND_UP_DELTA = 0.0001;
 
@@ -124,20 +122,20 @@ namespace LibDeltaSystem.Entities.ArkEntries.Dinosaur
 
     public class DinosaurEntryStatusComponent
     {
-        public float baseFoodConsumptionRate;
-        public float babyDinoConsumingFoodRateMultiplier;
-        public float extraBabyDinoConsumingFoodRateMultiplier;
-        public float foodConsumptionMultiplier;
-        public float tamedBaseHealthMultiplier;
+        public float baseFoodConsumptionRate { get; set; }
+        public float babyDinoConsumingFoodRateMultiplier { get; set; }
+        public float extraBabyDinoConsumingFoodRateMultiplier { get; set; }
+        public float foodConsumptionMultiplier { get; set; }
+        public float tamedBaseHealthMultiplier { get; set; }
     }
 
     public class DinosaurEntryFood
     {
-        public string classname;
-        public float foodEffectivenessMultiplier;
-        public float affinityOverride;
-        public float affinityEffectivenessMultiplier;
-        public int foodCategory;
-        public float priority;
+        public string classname { get; set; }
+        public float foodEffectivenessMultiplier { get; set; }
+        public float affinityOverride { get; set; }
+        public float affinityEffectivenessMultiplier { get; set; }
+        public int foodCategory { get; set; }
+        public float priority { get; set; }
     }
 }

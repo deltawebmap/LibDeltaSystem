@@ -85,14 +85,9 @@ namespace LibDeltaSystem.Db.System
         public bool is_pvp { get; set; }
 
         /// <summary>
-        /// Revision ID for dinos
+        /// Holds current revision IDs. Maximum of 32.
         /// </summary>
-        public int revision_id_dinos { get; set; }
-
-        /// <summary>
-        /// Revision ID for structures
-        /// </summary>
-        public int revision_id_structures { get; set; }
+        public ulong[] revision_ids { get; set; } = new ulong[32];
 
         /// <summary>
         /// Multiplier for how quickly events are sent from the ARK server. Requires reboot. 1 is default. Increase for larger servers

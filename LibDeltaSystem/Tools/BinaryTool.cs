@@ -22,5 +22,17 @@ namespace LibDeltaSystem.Tools
                 Array.Reverse(d);
             return BitConverter.ToInt32(d);
         }
+
+        public static bool CompareBytes(byte[] a, byte[] b)
+        {
+            if (a.Length != b.Length)
+                return false;
+            for(int i = 0; i<a.Length; i++)
+            {
+                if (a[i] != b[i])
+                    return false;
+            }
+            return true;
+        }
     }
 }

@@ -9,8 +9,10 @@ namespace LibDeltaSystem.Db.Content
     /// <summary>
     /// Contians item data. Can be stored directly in the table
     /// </summary>
-    public class DbItem : DbContentBase
+    public class DbItem : DbRevisionMappedContentBase
     {
+        public const string CUSTOM_DATA_KEY__CRYO_DINO_ID = "CRYO_DINO_ID";
+        
         /// <summary>
         /// The ID of the parent over this
         /// </summary>
@@ -67,9 +69,14 @@ namespace LibDeltaSystem.Db.Content
         public string crafter_tribe { get; set; }
 
         /// <summary>
-        /// Used for version control. Matches the revision ID type of the parent inventory
+        /// If this has custom data, this has it's name
         /// </summary>
-        public int revision_id { get; set; }
+        public string custom_data_name { get; set; }
+
+        /// <summary>
+        /// If this has custom data, this has it's value mapped to the name above
+        /// </summary>
+        public string custom_data_value { get; set; }
 
         /// <summary>
         /// Gets the database hash

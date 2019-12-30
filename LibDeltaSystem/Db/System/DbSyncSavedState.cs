@@ -1,13 +1,15 @@
-﻿using System;
+﻿using MongoDB.Driver;
+using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace LibDeltaSystem.Db.System
 {
     /// <summary>
     /// Represents a saved state for a connection to the sync server
     /// </summary>
-    public class DbSyncSavedState
+    public class DbSyncSavedState : DbBaseSystem
     {
         /// <summary>
         /// The code sent to the ARK server
@@ -38,5 +40,20 @@ namespace LibDeltaSystem.Db.System
         /// The version of the sync server this was created on
         /// </summary>
         public int system_version { get; set; }
+
+        /// <summary>
+        /// Gets a DbSyncSavedState object.
+        /// </summary>
+        /// <param name="conn"></param>
+        /// <param name="token"></param>
+        /// <returns></returns>
+        public static async Task<DbSyncSavedState> GetStateByTokenAsync(DeltaConnection conn, string token)
+        {
+            var filterBuilder = Builders<DbSyncSavedState>.Filter;
+            var filter = filterBuilder.Eq("token", token);
+            var results = await conn.system_sync_states.FindAsync(filter);
+            var r = await results.FirstOrDefaultAsync();
+            return r;
+        }
     }
 }

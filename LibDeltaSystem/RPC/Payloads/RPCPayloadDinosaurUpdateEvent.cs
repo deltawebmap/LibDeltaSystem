@@ -20,6 +20,7 @@ namespace LibDeltaSystem.RPC.Payloads
             public float z;
             public string id;
             public string species;
+            public bool is_cryo;
         }
     }
 }

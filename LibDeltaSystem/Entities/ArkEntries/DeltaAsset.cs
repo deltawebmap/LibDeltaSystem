@@ -9,8 +9,8 @@ namespace LibDeltaSystem.Entities.ArkEntries
     /// </summary>
     public class DeltaAsset
     {
-        public string image_url;
-        public string image_thumb_url;
+        public string image_url { get; set; }
+        public string image_thumb_url { get; set; }
 
         public static readonly DeltaAsset MISSING_ICON = new DeltaAsset
         {

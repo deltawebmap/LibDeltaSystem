@@ -1,5 +1,6 @@
 ﻿using LibDeltaSystem.Db.System;
 using LibDeltaSystem.Db.System.Entities;
+using LibDeltaSystem.Entities;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using System;
@@ -9,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace LibDeltaSystem.Db.Content
 {
-    public class DbDino : DbContentBase
+    public class DbDino : DbRevisionMappedContentBase
     {
         /// <summary>
         /// The ID of this dinosaur
@@ -49,22 +50,22 @@ namespace LibDeltaSystem.Db.Content
         /// <summary>
         /// The current stats
         /// </summary>
-        public DbArkDinosaurStats current_stats { get; set; }
+        public float[] current_stats { get; set; }
         
         /// <summary>
         /// The max stats, sent from ARK
         /// </summary>
-        public DbArkDinosaurStats max_stats { get; set; }
+        public float[] max_stats { get; set; }
 
         /// <summary>
         /// The number of levelups applied
         /// </summary>
-        public DbArkDinosaurStats base_levelups_applied { get; set; }
+        public int[] base_levelups_applied { get; set; }
 
         /// <summary>
         /// The levelups applied while tamed
         /// </summary>
-        public DbArkDinosaurStats tamed_levelups_applied { get; set; }
+        public int[] tamed_levelups_applied { get; set; }
 
         /// <summary>
         /// The base level at spawn time
@@ -117,9 +118,29 @@ namespace LibDeltaSystem.Db.Content
         public float taming_effectiveness { get; set; }
 
         /// <summary>
-        /// Revision ID this is mapped to
+        /// True if this dino is currently in a cryopod
         /// </summary>
-        public int revision_id { get; set; }
+        public bool is_cryo { get; set; }
+
+        /// <summary>
+        /// Current inventory this belongs to
+        /// </summary>
+        public string cryo_inventory_id { get; set; }
+
+        /// <summary>
+        /// Current inventory this belongs to
+        /// </summary>
+        public int cryo_inventory_type { get; set; }
+
+        /// <summary>
+        /// Current inventory this belongs to
+        /// </summary>
+        public ulong cryo_inventory_itemid { get; set; }
+
+        /// <summary>
+        /// ExperiencePoints
+        /// </summary>
+        public float experience_points { get; set; }
 
         /// <summary>
         /// Returns this dino's prefs. Will never return null.
@@ -144,6 +165,26 @@ namespace LibDeltaSystem.Db.Content
             var response = await server.conn.content_dinos.FindAsync(filter);
             var dino = await response.FirstOrDefaultAsync();
             return dino;
+        }
+
+        public int GetBaseLevelUp(ArkDinoStat stat)
+        {
+            return base_levelups_applied[(int)stat];
+        }
+
+        public int GetTamedLevelUp(ArkDinoStat stat)
+        {
+            return tamed_levelups_applied[(int)stat];
+        }
+
+        public float GetCurrentStat(ArkDinoStat stat)
+        {
+            return current_stats[(int)stat];
+        }
+
+        public float GetMaxStat(ArkDinoStat stat)
+        {
+            return max_stats[(int)stat];
         }
     }
 }

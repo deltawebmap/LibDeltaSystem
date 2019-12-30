@@ -1,9 +1,12 @@
 ﻿using FirebaseAdmin;
 using FirebaseAdmin.Messaging;
+using LibDeltaSystem.Db.ArkEntries;
 using LibDeltaSystem.Db.Content;
 using LibDeltaSystem.Db.System;
+using LibDeltaSystem.Db.System.Analytics;
 using LibDeltaSystem.Db.System.Entities;
 using LibDeltaSystem.Entities;
+using LibDeltaSystem.Entities.ArkEntries.Dinosaur;
 using LibDeltaSystem.Entities.DynamicTiles;
 using LibDeltaSystem.Entities.PrivateNet;
 using MongoDB.Bson;
@@ -23,6 +26,7 @@ namespace LibDeltaSystem
         private MongoClient content_client;
         private IMongoDatabase content_database;
         private IMongoDatabase system_database;
+        private IMongoDatabase charlie_database;
 
         public IMongoCollection<DbDino> content_dinos;
         public IMongoCollection<DbItem> content_items;
@@ -48,6 +52,10 @@ namespace LibDeltaSystem
         public IMongoCollection<DbSyncSavedState> system_sync_states;
         public IMongoCollection<DbOauthApp> system_oauth_apps;
         public IMongoCollection<DbCluster> system_clusters;
+        public IMongoCollection<DbModTimeAnalyticsObject> system_analytics_time;
+
+        public IMongoCollection<DbArkEntry<DinosaurEntry>> arkentries_dinos;
+        public IMongoCollection<DbArkEntry<ItemEntry>> arkentries_items;
 
         public DeltaConnectionConfig config;
 
@@ -66,25 +74,6 @@ namespace LibDeltaSystem
             this.system_version_major = system_version_major;
             this.system_version_minor = system_version_minor;
             this.system_name = system_name;
-        }
-
-        public DeltaConnection(DeltaConnectionConfig config, string system_name, int system_version_major, int system_version_minor)
-        {
-            this.config = config;
-            this.http = new HttpClient();
-            this.system_version_major = system_version_major;
-            this.system_version_minor = system_version_minor;
-            this.system_name = system_name;
-        }
-
-        private static async Task<T> GetDocumentById<T>(IMongoCollection<T> collec, string id)
-        {
-            //Find
-            var filterBuilder = Builders<T>.Filter;
-            var filter = filterBuilder.Eq("_id", ObjectId.Parse(id));
-            var results = await collec.FindAsync(filter);
-            var r = await results.FirstOrDefaultAsync();
-            return r;
         }
 
         /// <summary>
@@ -124,6 +113,11 @@ namespace LibDeltaSystem
             system_sync_states = system_database.GetCollection<DbSyncSavedState>("sync_states");
             system_oauth_apps = system_database.GetCollection<DbOauthApp>("oauth_apps");
             system_clusters = system_database.GetCollection<DbCluster>("clusters");
+            system_analytics_time = system_database.GetCollection<DbModTimeAnalyticsObject>("analytics_time");
+
+            charlie_database = content_client.GetDatabase("delta-charlie-" + config.env);
+            arkentries_dinos = charlie_database.GetCollection<DbArkEntry<DinosaurEntry>>("dino_entries");
+            arkentries_items = charlie_database.GetCollection<DbArkEntry<ItemEntry>>("item_entries");
 
             //Set up Google Firebase
             if(config.firebase_config != null)
@@ -133,6 +127,25 @@ namespace LibDeltaSystem
                     Credential = Google.Apis.Auth.OAuth2.GoogleCredential.FromFile(config.firebase_config),
                 });
             }
+        }
+
+        public DeltaConnection(DeltaConnectionConfig config, string system_name, int system_version_major, int system_version_minor)
+        {
+            this.config = config;
+            this.http = new HttpClient();
+            this.system_version_major = system_version_major;
+            this.system_version_minor = system_version_minor;
+            this.system_name = system_name;
+        }
+
+        private static async Task<T> GetDocumentById<T>(IMongoCollection<T> collec, string id)
+        {
+            //Find
+            var filterBuilder = Builders<T>.Filter;
+            var filter = filterBuilder.Eq("_id", ObjectId.Parse(id));
+            var results = await collec.FindAsync(filter);
+            var r = await results.FirstOrDefaultAsync();
+            return r;
         }
 
         /// <summary>
