@@ -1,111 +1,45 @@
-﻿using LibDeltaSystem.Entities.ArkEntries.Dinosaur;
+﻿using LibDeltaSystem.Db.ArkEntries;
+using LibDeltaSystem.Entities.ArkEntries.Dinosaur;
 using LibDeltaSystem.Entities.PrivateNet.Packages;
+using LibDeltaSystem.Tools.InternalPrimalData;
+using MongoDB.Driver;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace LibDeltaSystem
 {
     public class DeltaPrimalDataPackage
     {
-        public List<DinosaurEntry> dino_entries;
-        public List<ItemEntry> item_entries;
+        private DeltaConnection conn;
+        private string[] mods;
 
-        public DeltaPrimalDataPackage()
+        private static PrimalDataTypeBinder<DinosaurEntry> dino_cache;
+        private static PrimalDataTypeBinder<ItemEntry> item_cache;
+
+        public DeltaPrimalDataPackage(string[] mods, DeltaConnection conn)
         {
-            dino_entries = new List<DinosaurEntry>();
-            item_entries = new List<ItemEntry>();
+            this.conn = conn;
+
+            if (dino_cache == null)
+                dino_cache = new PrimalDataTypeBinder<DinosaurEntry>(conn.arkentries_dinos);
+            if (item_cache == null)
+                item_cache = new PrimalDataTypeBinder<ItemEntry>(conn.arkentries_items);
         }
 
-        /// <summary>
-        /// Loads all content from a ZIP file stream
-        /// </summary>
-        /// <param name="s">ZIP file to load</param>
-        /// <returns></returns>
-        public static async Task<DeltaPrimalDataPackage> LoadFromZipStream(Stream s)
+        private string TrimClassname(string classname)
         {
-            //Create package
-            DeltaPrimalDataPackage package = new DeltaPrimalDataPackage();
-            
-            //Open ZIP stream on this
-            using (ZipArchive zip = new ZipArchive(s, ZipArchiveMode.Read))
-            {
-                package.dino_entries = await ZipHelper<List<DinosaurEntry>>(zip.GetEntry("dinos.bson"));
-                package.item_entries = await ZipHelper<List<ItemEntry>>(zip.GetEntry("items.bson"));
-            }
-
-            return package;
-        }
-
-        private static async Task<T> ZipHelper<T>(ZipArchiveEntry entry)
-        {
-            //Get entry stream
-            T output;
-            using (Stream s = entry.Open())
-            using (BsonReader reader = new BsonReader(s))
-            {
-                JsonSerializer serializer = new JsonSerializer();
-                reader.ReadRootValueAsArray = true; //Thanks, James! https://stackoverflow.com/questions/16910369/bson-array-deserialization-with-json-net
-                output = serializer.Deserialize<T>(reader);
-            }
-            return output;
-        }
-
-        public void CopyTo(DeltaPrimalDataPackage destination)
-        {
-            //Copy and overwrite entries
-            destination.dino_entries.AddRange(dino_entries);
-            destination.item_entries.AddRange(item_entries);
-        }
-
-        /// <summary>
-        /// Loads a package from the cache
-        /// </summary>
-        /// <param name="mods"></param>
-        /// <returns></returns>
-        public static async Task<DeltaPrimalDataPackage> LoadPackage(DeltaPrimalDataCache cache, string[] mods)
-        {
-            //Get package index
-            PackageIndex index = await cache.GetIndex();
-
-            //Create package to add to
-            DeltaPrimalDataPackage package = new DeltaPrimalDataPackage();
-
-            //Get base mod and copy it to the package
-            {
-                //Search for this in the package
-                PackageIndexPatch pack = index.GetPackageById("base");
-
-                //Get package data
-                DeltaPrimalDataPackage payload = await cache.GetMod(pack.url, pack.id);
-
-                //Copy this to our package
-                payload.CopyTo(package);
-            }
-
-            //Search for mods, in order
-            foreach(var m in mods)
-            {
-                //Search for this in the package
-                PackageIndexPatch pack = index.GetPackageById(m);
-
-                //Stop if it's not discovered
-                if (pack == null)
-                    continue;
-
-                //Get package data
-                DeltaPrimalDataPackage payload = await cache.GetMod(pack.url, pack.id);
-
-                //Copy this to our package
-                payload.CopyTo(package);
-            }
-
-            return package;
+            //Trim ending _C, if it's there
+            if (classname.EndsWith("_C"))
+                return classname.Substring(0, classname.Length - 2);
+            return classname;
         }
 
         /// <summary>
@@ -113,18 +47,86 @@ namespace LibDeltaSystem
         /// </summary>
         /// <param name="classname"></param>
         /// <returns></returns>
+        public async Task<DinosaurEntry> GetDinoEntryByClssnameAsnyc(string classname)
+        {
+            //Get real classname
+            classname = TrimClassname(classname);
+
+            //Get datas
+            var cache = await dino_cache.GetDatasAsync();
+
+            //Check if we have this item cached
+            DbArkEntry<DinosaurEntry> entry = cache.Where(x => x.classname == classname).FirstOrDefault();
+            if (entry != null)
+                return entry.data;
+
+            return null;
+        }
+
+        /// <summary>
+        /// Returns a dino entry by it's display name
+        /// </summary>
+        /// <param name="classname"></param>
+        /// <returns></returns>
+        public async Task<DinosaurEntry> GetDinoEntryByNameAsnyc(string name)
+        {
+            //Get datas
+            var cache = await dino_cache.GetDatasAsync();
+
+            //Check if we have this item cached
+            DbArkEntry<DinosaurEntry> entry = cache.Where(x => x.data.screen_name == name).FirstOrDefault();
+            if (entry != null)
+                return entry.data;
+
+            return null;
+        }
+
+        /// <summary>
+        /// Returns a dino entry by it's classname
+        /// </summary>
+        /// <param name="classname"></param>
+        /// <returns></returns>
+        [Obsolete("Please use GetDinoEntryByClassnameAsync instead.")]
         public DinosaurEntry GetDinoEntry(string classname)
         {
-            //Trim ending _C, if it's there
-            if (classname.EndsWith("_C"))
-                classname = classname.Substring(0, classname.Length - 2);
+            return GetDinoEntryByClssnameAsnyc(classname).GetAwaiter().GetResult();
+        }
 
-            //Search
-            for(var i = dino_entries.Count - 1; i>=0; i--)
-            {
-                if (dino_entries[i].classname == classname)
-                    return dino_entries[i];
-            }
+        /// <summary>
+        /// Returns an item entry by it's classname
+        /// </summary>
+        /// <param name="classname"></param>
+        /// <returns></returns>
+        public async Task<ItemEntry> GetItemEntryByClssnameAsnyc(string classname)
+        {
+            //Get real classname
+            classname = TrimClassname(classname);
+
+            //Get datas
+            var cache = await item_cache.GetDatasAsync();
+
+            //Check if we have this item cached
+            DbArkEntry<ItemEntry> entry = cache.Where(x => x.classname == classname).FirstOrDefault();
+            if (entry != null)
+                return entry.data;
+
+            return null;
+        }
+
+        /// <summary>
+        /// Returns an item entry by it's display name
+        /// </summary>
+        /// <param name="classname"></param>
+        /// <returns></returns>
+        public async Task<ItemEntry> GetItemEntryByNameAsnyc(string name)
+        {
+            //Get datas
+            var cache = await item_cache.GetDatasAsync();
+
+            //Check if we have this item cached
+            DbArkEntry<ItemEntry> entry = cache.Where(x => x.data.name == name).FirstOrDefault();
+            if (entry != null)
+                return entry.data;
 
             return null;
         }
@@ -134,20 +136,10 @@ namespace LibDeltaSystem
         /// </summary>
         /// <param name="classname"></param>
         /// <returns></returns>
+        [Obsolete("Please use GetItemEntryByClassnameAsync instead.")]
         public ItemEntry GetItemEntry(string classname)
         {
-            //Trim ending _C, if it's there
-            if (classname.EndsWith("_C"))
-                classname = classname.Substring(0, classname.Length - 2);
-
-            //Search
-            for (var i = item_entries.Count - 1; i >= 0; i--)
-            {
-                if (item_entries[i].classname == classname)
-                    return item_entries[i];
-            }
-
-            return null;
+            return GetItemEntryByClssnameAsnyc(classname).GetAwaiter().GetResult();
         }
     }
 }

@@ -79,6 +79,11 @@ namespace LibDeltaSystem.Db.Content
         public string custom_data_value { get; set; }
 
         /// <summary>
+        /// The display name of this entry, usually used for item searches
+        /// </summary>
+        public string entry_display_name { get; set; }
+
+        /// <summary>
         /// Gets the database hash
         /// </summary>
         /// <returns></returns>

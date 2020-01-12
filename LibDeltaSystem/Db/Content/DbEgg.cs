@@ -1,4 +1,6 @@
-﻿using MongoDB.Driver;
+﻿using LibDeltaSystem.Db.System;
+using LibDeltaSystem.Tools;
+using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -111,10 +113,10 @@ namespace LibDeltaSystem.Db.Content
         /// <param name="delta"></param>
         /// <param name="id"></param>
         /// <returns></returns>
-        public static async Task<List<DbEgg>> GetTribeEggs(DeltaConnection delta, string server_id, int tribe_id)
+        public static async Task<List<DbEgg>> GetTribeEggs(DeltaConnection delta, DbServer server, int? tribeId)
         {
             var filterBuilder = Builders<DbEgg>.Filter;
-            var filter = filterBuilder.Eq("tribe_id", tribe_id) & filterBuilder.Eq("server_id", server_id);
+            var filter = FilterBuilderToolDb.CreateTribeFilter<DbEgg>(server, tribeId);
             var result = await delta.content_eggs.FindAsync(filter);
             List<DbEgg> c = await result.ToListAsync();
             return c;

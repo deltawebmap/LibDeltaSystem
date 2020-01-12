@@ -6,9 +6,11 @@ using LibDeltaSystem.Db.System;
 using LibDeltaSystem.Db.System.Analytics;
 using LibDeltaSystem.Db.System.Entities;
 using LibDeltaSystem.Entities;
+using LibDeltaSystem.Entities.ArkEntries;
 using LibDeltaSystem.Entities.ArkEntries.Dinosaur;
 using LibDeltaSystem.Entities.DynamicTiles;
 using LibDeltaSystem.Entities.PrivateNet;
+using LibDeltaSystem.Tools;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Newtonsoft.Json;
@@ -56,6 +58,7 @@ namespace LibDeltaSystem
 
         public IMongoCollection<DbArkEntry<DinosaurEntry>> arkentries_dinos;
         public IMongoCollection<DbArkEntry<ItemEntry>> arkentries_items;
+        public IMongoCollection<DbArkMapEntry> arkentries_maps;
 
         public DeltaConnectionConfig config;
 
@@ -87,7 +90,7 @@ namespace LibDeltaSystem
                 config.mongodb_connection
             );
 
-            content_database = content_client.GetDatabase("delta-"+config.env);
+            content_database = content_client.GetDatabase("delta-"+config.env+"-content");
             content_dinos = content_database.GetCollection<DbDino>("dinos");
             content_items = content_database.GetCollection<DbItem>("items");
             content_tribes = content_database.GetCollection<DbTribe>("tribes");
@@ -96,7 +99,7 @@ namespace LibDeltaSystem
             content_tribe_log = content_database.GetCollection<DbTribeLogEntry>("tribe_log_entries");
             content_eggs = content_database.GetCollection<DbEgg>("eggs");
 
-            system_database = content_client.GetDatabase("delta-system-"+config.env);
+            system_database = content_client.GetDatabase("delta-" + config.env + "-system");
             system_users = system_database.GetCollection<DbUser>("users");
             system_tokens = system_database.GetCollection<DbToken>("tokens");
             system_servers = system_database.GetCollection<DbServer>("servers");
@@ -115,18 +118,10 @@ namespace LibDeltaSystem
             system_clusters = system_database.GetCollection<DbCluster>("clusters");
             system_analytics_time = system_database.GetCollection<DbModTimeAnalyticsObject>("analytics_time");
 
-            charlie_database = content_client.GetDatabase("delta-charlie-" + config.env);
+            charlie_database = content_client.GetDatabase("delta-" + config.env + "-charlie");
             arkentries_dinos = charlie_database.GetCollection<DbArkEntry<DinosaurEntry>>("dino_entries");
             arkentries_items = charlie_database.GetCollection<DbArkEntry<ItemEntry>>("item_entries");
-
-            //Set up Google Firebase
-            if(config.firebase_config != null)
-            {
-                FirebaseApp.Create(new AppOptions()
-                {
-                    Credential = Google.Apis.Auth.OAuth2.GoogleCredential.FromFile(config.firebase_config),
-                });
-            }
+            arkentries_maps = charlie_database.GetCollection<DbArkMapEntry>("maps");
         }
 
         public DeltaConnection(DeltaConnectionConfig config, string system_name, int system_version_major, int system_version_minor)
@@ -138,6 +133,93 @@ namespace LibDeltaSystem
             this.system_name = system_name;
         }
 
+        /// <summary>
+        /// Combines many small queries into one large one, then returns the mapped results
+        /// </summary>
+        /// <typeparam name="T">The type of data returned</typeparam>
+        /// <typeparam name="K">The type of the field used to access this</typeparam>
+        /// <returns></returns>
+        public static async Task<Dictionary<K, T>> MassGetObjects<T, K>(IMongoCollection<T> collec, FilterDefinition<T> query, string fieldName, List<K> targets)
+        {
+            //Get raw
+            var data = await MassGetObjectsRaw<T, K>(collec, query, fieldName, targets);
+
+            //Do reflection stuff
+            var field = typeof(T).GetField(fieldName);
+
+            //Organize
+            Dictionary<K, T> response = new Dictionary<K, T>();
+            foreach (var d in data) {
+                response.Add((K)field.GetValue(d), d);
+            }
+
+            return response;
+        }
+
+        /// <summary>
+        /// Combines many small queries into one large one, then returns the raw results
+        /// </summary>
+        /// <typeparam name="T">The type of data returned</typeparam>
+        /// <typeparam name="K">The type of the field used to access this</typeparam>
+        /// <returns></returns>
+        public static async Task<List<T>> MassGetObjectsRaw<T, K>(IMongoCollection<T> collec, FilterDefinition<T> query, string fieldName, List<K> targets)
+        {
+            //Get filter to read
+            var filterBuilder = Builders<T>.Filter;
+            var filter = filterBuilder.In(fieldName, targets) & query;
+
+            //Fetch
+            var results = await collec.FindAsync(filter);
+            var data = await results.ToListAsync();
+
+            return data;
+        }
+
+        public async Task<Dictionary<ulong, SavedDinoTribePrefs>> MassGetDinoPrefs(DbServer server, List<DbDino> dinos)
+        {
+            //Convert dinos to a list of ulongs
+            List<ulong> ids = new List<ulong>();
+            foreach(var d in dinos)
+            {
+                if (!ids.Contains(d.dino_id))
+                    ids.Add(d.dino_id);
+            }
+            
+            //Mass fetch data
+            var filterBuilder = Builders<DbSavedDinoTribePrefs>.Filter;
+            var filter = filterBuilder.Eq("server_id", server);
+            var results = await MassGetObjectsRaw<DbSavedDinoTribePrefs, ulong>(system_saved_dino_tribe_prefs, filter, "dino_id", ids);
+
+            //Clean up this array
+            Dictionary<ulong, SavedDinoTribePrefs> output = new Dictionary<ulong, SavedDinoTribePrefs>();
+            foreach(var r in results)
+            {
+                if (output.ContainsKey(r.dino_id))
+                    continue;
+                output.Add(r.dino_id, r.payload);
+            }
+
+            //Fill in the gaps by adding placeholder datas for dinos without data
+            foreach(var d in dinos)
+            {
+                if (output.ContainsKey(d.dino_id))
+                    continue;
+                output.Add(d.dino_id, new SavedDinoTribePrefs());
+            }
+
+            return output;
+        }
+
+        /// <summary>
+        /// Gets a new primal data package with the mods required
+        /// </summary>
+        /// <param name="mods"></param>
+        /// <returns></returns>
+        public async Task<DeltaPrimalDataPackage> GetPrimalDataPackage(string[] mods)
+        {
+            return new DeltaPrimalDataPackage(mods, this);
+        }
+
         private static async Task<T> GetDocumentById<T>(IMongoCollection<T> collec, string id)
         {
             //Find
@@ -146,6 +228,38 @@ namespace LibDeltaSystem
             var results = await collec.FindAsync(filter);
             var r = await results.FirstOrDefaultAsync();
             return r;
+        }
+
+        /// <summary>
+        /// Gets an ARK map by it's internal ARK name (for example, "ScorchedEarth_P")
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        public async Task<ArkMapEntry> GetARKMapByInternalName(string id)
+        {
+            var filterBuilder = Builders<DbArkMapEntry>.Filter;
+            var filter = filterBuilder.Eq("internalName", id);
+            var results = await arkentries_maps.FindAsync(filter);
+            var r = await results.FirstOrDefaultAsync();
+            if (r == null)
+                return null;
+            else
+                return r.data;
+        }
+
+        /// <summary>
+        /// Gets all ARK maps
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        public async Task<List<ArkMapEntry>> GetARKMaps()
+        {
+            var results = await arkentries_maps.FindAsync(FilterDefinition<DbArkMapEntry>.Empty);
+            var resultsList = await results.ToListAsync();
+            List<ArkMapEntry> output = new List<ArkMapEntry>();
+            foreach (var r in resultsList)
+                output.Add(r.data);
+            return output;
         }
 
         /// <summary>
@@ -362,15 +476,14 @@ namespace LibDeltaSystem
         /// <param name="target"></param>
         /// <param name="tile"></param>
         /// <returns></returns>
-        public async Task<List<DbStructure>> GetTribeStructures(string server_id, int tribe_id)
+        public async Task<List<DbStructure>> GetTribeStructures(DbServer server, int? tribe_id)
         {
             //Make sure structures are up to date
             GetStructureMetadata();
 
             //Commit query
             var filterBuilder = Builders<DbStructure>.Filter;
-            var filter = filterBuilder.Eq("server_id", server_id) &
-                filterBuilder.Eq("tribe_id", tribe_id) &
+            var filter = FilterBuilderToolDb.CreateTribeFilter<DbStructure>(server, tribe_id) & 
                 filterBuilder.In("classname", _supportedStructureMetadatas);
             var results = await content_structures.FindAsync(filter);
             return await results.ToListAsync();

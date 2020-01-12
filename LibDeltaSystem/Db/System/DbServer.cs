@@ -1,5 +1,6 @@
 ﻿using LibDeltaSystem.Db.Content;
 using LibDeltaSystem.Db.System.Entities;
+using LibDeltaSystem.Entities.ArkEntries;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using System;
@@ -93,6 +94,22 @@ namespace LibDeltaSystem.Db.System
         /// Multiplier for how quickly events are sent from the ARK server. Requires reboot. 1 is default. Increase for larger servers
         /// </summary>
         public float update_speed_multiplier { get; set; } = 1;
+
+        /// <summary>
+        /// Checks if a user is admin on this server
+        /// </summary>
+        /// <param name="user"></param>
+        /// <returns></returns>
+        public bool CheckIsUserAdmin(DbUser user)
+        {
+            //TODO!!!!!!
+            return true;
+        }
+
+        public async Task<ArkMapEntry> GetMapEntryAsync(DeltaConnection conn)
+        {
+            return await conn.GetARKMapByInternalName(latest_server_map);
+        }
 
         /// <summary>
         /// Checks a permission flag at a bit index

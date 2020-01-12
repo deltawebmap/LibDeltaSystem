@@ -11,6 +11,8 @@ using Newtonsoft.Json;
 using LibDeltaSystem.Db.System;
 using System.Threading.Tasks;
 using LibDeltaSystem.Tools.InternalComms;
+using LibDeltaSystem.RPC.Payloads;
+using LibDeltaSystem.Entities.Notifications;
 
 namespace LibDeltaSystem
 {
@@ -19,6 +21,29 @@ namespace LibDeltaSystem
         public DeltaRPCConnection(DeltaConnection conn, byte[] key, IPEndPoint endpoint) : base(conn, key, endpoint)
         {
 
+        }
+
+        public static RPCPayloadPutNotification GetNotificationPayload(PushNotificationDisplayInfo info, DbServer targetServer = null)
+        {
+            PushNotification n = new PushNotification
+            {
+                info = info,
+                id = new Random().Next(),
+                server = null
+            };
+            if(targetServer != null)
+            {
+                n.server = new PushNotificationServer
+                {
+                    icon = targetServer.image_url,
+                    id = targetServer.id,
+                    name = targetServer.display_name
+                };
+            }
+            return new RPCPayloadPutNotification
+            {
+                notification = n
+            };
         }
 
         /// <summary>
@@ -35,7 +60,7 @@ namespace LibDeltaSystem
         /// <summary>
         /// Sends an RPC message
         /// </summary>
-        public void SendRPCMessage(RPCOpcode opcode, string target_server_id, RPCPayload payload, RPCFilter filter)
+        public void SendRPCMessage(RPCOpcode opcode, string target_server_id, RPCPayload payload, RPCFilter filter, RPCType type = RPCType.RPC)
         {
             //Create the actual payload message
             byte[] message = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new RPCMessageContainer
@@ -50,7 +75,7 @@ namespace LibDeltaSystem
             byte[] filterMsg = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(filter));
 
             //Queue
-            RawSendMessage(1, new Dictionary<string, byte[]>
+            RawSendMessage((int)type, new Dictionary<string, byte[]>
             {
                 {"FILTER", filterMsg },
                 {"DATA", message }
@@ -65,7 +90,7 @@ namespace LibDeltaSystem
         /// <param name="server">Server</param>
         /// <param name="tribeId">Tribe ID</param>
         /// <returns></returns>
-        public void SendRPCMessageToTribe(RPCOpcode opcode, RPCPayload payload, DbServer server, int tribeId)
+        public void SendRPCMessageToTribe(RPCOpcode opcode, RPCPayload payload, DbServer server, int tribeId, RPCType type = RPCType.RPC)
         {
             //Create filter to use
             RPCFilter filter = new RPCFilter
@@ -79,7 +104,7 @@ namespace LibDeltaSystem
             };
 
             //Send
-            SendRPCMessage(opcode, server.id, payload, filter);
+            SendRPCMessage(opcode, server.id, payload, filter, type);
         }
 
         /// <summary>
@@ -89,7 +114,7 @@ namespace LibDeltaSystem
         /// <param name="payload">Message payload</param>
         /// <param name="server">Server</param>
         /// <returns></returns>
-        public void SendRPCMessageToServer(RPCOpcode opcode, RPCPayload payload, DbServer server)
+        public void SendRPCMessageToServer(RPCOpcode opcode, RPCPayload payload, DbServer server, RPCType type = RPCType.RPC)
         {
             //Create filter to use
             RPCFilter filter = new RPCFilter
@@ -102,7 +127,7 @@ namespace LibDeltaSystem
             };
 
             //Send
-            SendRPCMessage(opcode, server.id, payload, filter);
+            SendRPCMessage(opcode, server.id, payload, filter, type);
         }
 
         /// <summary>
@@ -112,7 +137,7 @@ namespace LibDeltaSystem
         /// <param name="payload">Message payload</param>
         /// <param name="user">User</param>
         /// <returns></returns>
-        public void SendRPCMessageToUser(RPCOpcode opcode, RPCPayload payload, string user_id)
+        public void SendRPCMessageToUser(RPCOpcode opcode, RPCPayload payload, string user_id, RPCType type = RPCType.RPC)
         {
             //Create filter to use
             RPCFilter filter = new RPCFilter
@@ -125,7 +150,7 @@ namespace LibDeltaSystem
             };
 
             //Send
-            SendRPCMessage(opcode, null, payload, filter);
+            SendRPCMessage(opcode, null, payload, filter, type);
         }
 
         /// <summary>
@@ -135,9 +160,15 @@ namespace LibDeltaSystem
         /// <param name="payload">Message payload</param>
         /// <param name="user">User</param>
         /// <returns></returns>
-        public void SendRPCMessageToUser(RPCOpcode opcode, RPCPayload payload, DbUser user)
+        public void SendRPCMessageToUser(RPCOpcode opcode, RPCPayload payload, DbUser user, RPCType type = RPCType.RPC)
         {
-            SendRPCMessageToUser(opcode, payload, user.id);
+            SendRPCMessageToUser(opcode, payload, user.id, type);
         }
+    }
+
+    public enum RPCType
+    {
+        RPC = 1,
+        Notification = 2
     }
 }

@@ -28,7 +28,6 @@ namespace LibDeltaSystem.Db.Content
         /// <summary>
         /// The tribe ID this dinosaur belongs to
         /// </summary>
-        [JsonIgnore]
         public int tribe_id { get; set; }
     }
 }

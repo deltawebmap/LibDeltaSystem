@@ -11,6 +11,7 @@ namespace LibDeltaSystem.RPC
         LogMessage = 2, //Logs a message, eRPCPayloadLogMessage
         CanvasChange = 3, //Called when a canvas is changed
         PlayerListChanged = 4, //Called when the player list is updated
-        DinoPrefsChanged = 5 //Called when dino prefs change
+        DinoPrefsChanged = 5, //Called when dino prefs change
+        PutNotification = 6, //Sends a new notification
     }
 }
