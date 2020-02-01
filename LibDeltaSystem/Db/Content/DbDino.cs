@@ -1,6 +1,7 @@
 ﻿using LibDeltaSystem.Db.System;
 using LibDeltaSystem.Db.System.Entities;
 using LibDeltaSystem.Entities;
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using System;
@@ -149,7 +150,7 @@ namespace LibDeltaSystem.Db.Content
         /// <returns></returns>
         public async Task<SavedDinoTribePrefs> GetPrefs(DeltaConnection conn)
         {
-            return await conn.GetDinoPrefs(server_id, tribe_id, dino_id);
+            return await conn.GetDinoPrefs(ObjectId.Parse(server_id), tribe_id, dino_id);
         }
 
         /// <summary>

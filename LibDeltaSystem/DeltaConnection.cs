@@ -37,6 +37,7 @@ namespace LibDeltaSystem
         public IMongoCollection<DbStructure> content_structures;
         public IMongoCollection<DbTribeLogEntry> content_tribe_log;
         public IMongoCollection<DbEgg> content_eggs;
+        public IMongoCollection<DbPlayerCharacter> content_player_characters;
 
         public IMongoCollection<DbUser> system_users;
         public IMongoCollection<DbToken> system_tokens;
@@ -98,6 +99,7 @@ namespace LibDeltaSystem
             content_structures = content_database.GetCollection<DbStructure>("structures");
             content_tribe_log = content_database.GetCollection<DbTribeLogEntry>("tribe_log_entries");
             content_eggs = content_database.GetCollection<DbEgg>("eggs");
+            content_player_characters = content_database.GetCollection<DbPlayerCharacter>("player_characters");
 
             system_database = content_client.GetDatabase("delta-" + config.env + "-system");
             system_users = system_database.GetCollection<DbUser>("users");
@@ -187,7 +189,7 @@ namespace LibDeltaSystem
             
             //Mass fetch data
             var filterBuilder = Builders<DbSavedDinoTribePrefs>.Filter;
-            var filter = filterBuilder.Eq("server_id", server);
+            var filter = filterBuilder.Eq("server_id", server._id);
             var results = await MassGetObjectsRaw<DbSavedDinoTribePrefs, ulong>(system_saved_dino_tribe_prefs, filter, "dino_id", ids);
 
             //Clean up this array
@@ -421,7 +423,7 @@ namespace LibDeltaSystem
         /// <param name="tribeId"></param>
         /// <param name="dinoId"></param>
         /// <returns></returns>
-        public async Task<SavedDinoTribePrefs> GetDinoPrefs(string serverId, int tribeId, ulong dinoId)
+        public async Task<SavedDinoTribePrefs> GetDinoPrefs(ObjectId serverId, int tribeId, ulong dinoId)
         {
             var filterBuilder = Builders<DbSavedDinoTribePrefs>.Filter;
             var filter = filterBuilder.Eq("server_id", serverId) & filterBuilder.Eq("dino_id", dinoId) & filterBuilder.Eq("tribe_id", tribeId);
@@ -634,7 +636,11 @@ namespace LibDeltaSystem
 
             //If the profile was valid, return it
             if (profile != null)
+            {
+                if (profile.result != 1)
+                    return null;
                 return profile;
+            }
 
             //We'll fetch updated Steam info
             SteamModDataRootObject profiles;
@@ -660,6 +666,10 @@ namespace LibDeltaSystem
                 return null;
             profile = profiles.response.publishedfiledetails[0];
             profile.conn = this;
+
+            //Check profile
+            if (profile.result != 1)
+                return null;
 
             //Now, insert for future use
             {

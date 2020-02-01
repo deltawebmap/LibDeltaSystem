@@ -96,6 +96,49 @@ namespace LibDeltaSystem.Db.System
         public float update_speed_multiplier { get; set; } = 1;
 
         /// <summary>
+        /// Delta Web Map user IDs with admin access. Does not include owner UID
+        /// </summary>
+        public ObjectId[] admins { get; set; } = new ObjectId[0];
+
+        /// <summary>
+        /// The time the last ARK client contacted the server on, represented in DateTime ticks
+        /// </summary>
+        public long last_client_connect_time { get; set; }
+
+        /// <summary>
+        /// The version the last ARK client that contacted this server was running
+        /// </summary>
+        public int last_client_version { get; set; }
+
+        /// <summary>
+        /// Gets a player character by it's ARK ID
+        /// </summary>
+        /// <param name="conn"></param>
+        /// <param name="tribeId"></param>
+        /// <param name="arkId"></param>
+        /// <returns></returns>
+        public async Task<DbPlayerCharacter> GetPlayerCharacterById(DeltaConnection conn, int? tribeId, uint arkId)
+        {
+            var filterBuilder = Builders<DbPlayerCharacter>.Filter;
+            var filter = filterBuilder.Eq("ark_id", arkId) & Tools.FilterBuilderToolDb.CreateTribeFilter<DbPlayerCharacter>(this, tribeId);
+            var result = await conn.content_player_characters.FindAsync(filter);
+            return await result.FirstOrDefaultAsync();
+        }
+
+        /// <summary>
+        /// Returns the player profile by ID
+        /// </summary>
+        /// <param name="steamId"></param>
+        /// <returns></returns>
+        public async Task<DbPlayerProfile> GetPlayerProfileBySteamIDAsync(DeltaConnection conn, int? tribeId, string steamId)
+        {
+            var filterBuilder = Builders<DbPlayerProfile>.Filter;
+            var filter = filterBuilder.Eq("steam_id", steamId) & Tools.FilterBuilderToolDb.CreateTribeFilter<DbPlayerProfile>(this, tribeId);
+            var results = await conn.content_player_profiles.FindAsync(filter);
+            return await results.FirstOrDefaultAsync();
+        }
+
+        /// <summary>
         /// Checks if a user is admin on this server
         /// </summary>
         /// <param name="user"></param>
@@ -157,10 +200,10 @@ namespace LibDeltaSystem.Db.System
             //Set
             for (int i = 0; i < 64; i++)
             {
-                ulong value = 0;
-                if (points[i])
-                    value = 1;
-                permission_flags |= ((value >> 0) & 1) << i;
+                if(points[i])
+                    permission_flags |= 1UL << i;
+                else
+                    permission_flags &= ~(1UL << i);
             }
         }
 
@@ -171,10 +214,10 @@ namespace LibDeltaSystem.Db.System
         /// <param name="flag"></param>
         public void SetLockFlag(int index, bool flag)
         {
-            uint value = 0;
             if (flag)
-                value = 1;
-            lock_flags |= ((value >> 0) & 1) << index;
+                lock_flags |= 1u << index;
+            else
+                lock_flags &= ~(1u << index);
         }
 
         /// <summary>
@@ -239,12 +282,12 @@ namespace LibDeltaSystem.Db.System
         /// </summary>
         /// <param name="steamId"></param>
         /// <returns></returns>
-        public async Task<DbPlayerProfile> GetPlayerProfileBySteamIdAsync(string steamId)
+        public async Task<List<DbPlayerProfile>> GetPlayerProfiles()
         {
             var filterBuilder = Builders<DbPlayerProfile>.Filter;
             var filter = filterBuilder.Eq("server_id", _id);
             var results = await conn.content_player_profiles.FindAsync(filter);
-            return await results.FirstOrDefaultAsync();
+            return await results.ToListAsync();
         }
 
         /// <summary>
@@ -307,6 +350,35 @@ namespace LibDeltaSystem.Db.System
             }
 
             return users;
+        }
+
+        public string[] GetAllServerModIDs()
+        {
+            //Verify
+            if (game_settings == null)
+                return new string[0];
+            if (game_settings.ActiveMods == null)
+                return new string[0];
+            return game_settings.ActiveMods.Split(',');
+        }
+
+        public async Task<Dictionary<string, DbSteamModCache>> GetAllServerMods(DeltaConnection conn, bool includeFailed)
+        {
+            //Get mod IDs
+            string[] ids = GetAllServerModIDs();
+            
+            //Get all
+            Dictionary<string, DbSteamModCache> dict = new Dictionary<string, DbSteamModCache>();
+            foreach(var s in ids)
+            {
+                var data = await conn.GetSteamModById(s);
+                if (data != null)
+                    dict.Add(s, data);
+                else if (includeFailed)
+                    dict.Add(s, null);
+            }
+
+            return dict;
         }
 
         /// <summary>

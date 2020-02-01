@@ -1,4 +1,7 @@
-﻿using System;
+﻿using LibDeltaSystem.Db.Content;
+using LibDeltaSystem.Db.System.Entities;
+using LibDeltaSystem.Entities.ArkEntries.Dinosaur;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -10,17 +13,10 @@ namespace LibDeltaSystem.RPC.Payloads
 
         public class RPCPayloadDinosaurUpdateEvent_Dino
         {
-            public string name;
-            public string classname;
-            public string icon;
-            public int level;
-            public string status;
-            public float x;
-            public float y;
-            public float z;
-            public string id;
-            public string species;
-            public bool is_cryo;
+            public string dino_id;
+            public DbDino dino;
+            public DinosaurEntry species;
+            public SavedDinoTribePrefs prefs;
         }
     }
 }

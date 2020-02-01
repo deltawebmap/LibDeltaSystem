@@ -13,5 +13,6 @@ namespace LibDeltaSystem.RPC
         PlayerListChanged = 4, //Called when the player list is updated
         DinoPrefsChanged = 5, //Called when dino prefs change
         PutNotification = 6, //Sends a new notification
+        LiveUpdate = 7, //An update to the live endpoint
     }
 }

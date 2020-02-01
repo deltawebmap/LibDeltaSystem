@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LibDeltaSystem.Entities;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -31,5 +32,17 @@ namespace LibDeltaSystem.Db.System
         public int views { get; set; }
 
         public long time_utc { get; set; }
+
+        public WebArkMod GetWebVersion()
+        {
+            return new WebArkMod
+            {
+                name = title,
+                description = description,
+                icon = preview_url,
+                size = file_size,
+                id = publishedfileid
+            };
+        }
     }
 }

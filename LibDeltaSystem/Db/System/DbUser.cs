@@ -276,6 +276,17 @@ namespace LibDeltaSystem.Db.System
         }
 
         /// <summary>
+        /// Gets a user by their ID.
+        /// </summary>
+        /// <returns></returns>
+        public static async Task<DbUser> GetUserByID(DeltaConnection conn, ObjectId id)
+        {
+            //Get user. If a user account isn't created yet, make one.
+            DbUser user = await conn.GetUserByIdAsync(id.ToString());
+            return user;
+        }
+
+        /// <summary>
         /// Authenticates a user using their token
         /// </summary>
         /// <param name="conn"></param>

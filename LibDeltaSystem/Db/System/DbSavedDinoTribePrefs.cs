@@ -1,4 +1,5 @@
 ﻿using LibDeltaSystem.Db.System.Entities;
+using MongoDB.Bson;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -10,7 +11,7 @@ namespace LibDeltaSystem.Db.System
         /// <summary>
         /// The ID of this server
         /// </summary>
-        public string server_id { get; set; }
+        public ObjectId server_id { get; set; }
 
         /// <summary>
         /// Dino ID associated with this
