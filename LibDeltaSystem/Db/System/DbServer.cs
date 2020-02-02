@@ -223,9 +223,9 @@ namespace LibDeltaSystem.Db.System
         /// <summary>
         /// Updates this in the database
         /// </summary>
-        public void Update()
+        public void Update(DeltaConnection conn)
         {
-            UpdateAsync().GetAwaiter().GetResult();
+            UpdateAsync(conn).GetAwaiter().GetResult();
         }
 
         /// <summary>
@@ -233,14 +233,12 @@ namespace LibDeltaSystem.Db.System
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        public async Task<List<DbCanvas>> GetServerCanvases()
+        public async Task<List<DbCanvas>> GetServerCanvases(DeltaConnection conn)
         {
             var filterBuilder = Builders<DbCanvas>.Filter;
             var filter = filterBuilder.Eq("server_id", id);
             var result = await conn.system_canvases.FindAsync(filter);
             List<DbCanvas> can = await result.ToListAsync();
-            foreach (var c in can)
-                c.conn = conn;
             return can;
         }
 
@@ -248,7 +246,7 @@ namespace LibDeltaSystem.Db.System
         /// Updates this in the database async
         /// </summary>
         /// <returns></returns>
-        public async Task UpdateAsync()
+        public async Task UpdateAsync(DeltaConnection conn)
         {
             var filterBuilder = Builders<DbServer>.Filter;
             var filter = filterBuilder.Eq("_id", _id);
@@ -259,7 +257,7 @@ namespace LibDeltaSystem.Db.System
         /// Updates this in the database async
         /// </summary>
         /// <returns></returns>
-        public async Task ExplicitUpdateAsync(UpdateDefinition<DbServer> update)
+        public async Task ExplicitUpdateAsync(DeltaConnection conn, UpdateDefinition<DbServer> update)
         {
             var filterBuilder = Builders<DbServer>.Filter;
             var filter = filterBuilder.Eq("_id", _id);
@@ -270,7 +268,7 @@ namespace LibDeltaSystem.Db.System
         /// Deletes this in the database async
         /// </summary>
         /// <returns></returns>
-        public async Task DeleteAsync()
+        public async Task DeleteAsync(DeltaConnection conn)
         {
             var filterBuilder = Builders<DbServer>.Filter;
             var filter = filterBuilder.Eq("_id", _id);
@@ -282,7 +280,7 @@ namespace LibDeltaSystem.Db.System
         /// </summary>
         /// <param name="steamId"></param>
         /// <returns></returns>
-        public async Task<List<DbPlayerProfile>> GetPlayerProfiles()
+        public async Task<List<DbPlayerProfile>> GetPlayerProfiles(DeltaConnection conn)
         {
             var filterBuilder = Builders<DbPlayerProfile>.Filter;
             var filter = filterBuilder.Eq("server_id", _id);
@@ -295,7 +293,7 @@ namespace LibDeltaSystem.Db.System
         /// </summary>
         /// <param name="steamId"></param>
         /// <returns></returns>
-        public async Task<DbTribe> GetTribeAsync(int tribeId)
+        public async Task<DbTribe> GetTribeAsync(DeltaConnection conn, int tribeId)
         {
             return await conn.GetTribeByTribeIdAsync(id, tribeId);
         }
@@ -305,7 +303,7 @@ namespace LibDeltaSystem.Db.System
         /// </summary>
         /// <param name="steamId"></param>
         /// <returns></returns>
-        public async Task<int?> TryGetTribeIdAsync(string steamId)
+        public async Task<int?> TryGetTribeIdAsync(DeltaConnection conn, string steamId)
         {
             var filterBuilder = Builders<DbPlayerProfile>.Filter;
             var filter = filterBuilder.Eq("server_id", id) & filterBuilder.Eq("steam_id", steamId);
@@ -322,7 +320,7 @@ namespace LibDeltaSystem.Db.System
         /// </summary>
         /// <param name="steamId"></param>
         /// <returns></returns>
-        public async Task<List<DbPlayerProfile>> GetPlayerProfilesByTribeAsync(int tribeId)
+        public async Task<List<DbPlayerProfile>> GetPlayerProfilesByTribeAsync(DeltaConnection conn, int tribeId)
         {
             var filterBuilder = Builders<DbPlayerProfile>.Filter;
             var filter = filterBuilder.Eq("server_id", id) & filterBuilder.Eq("tribe_id", tribeId);
@@ -335,10 +333,10 @@ namespace LibDeltaSystem.Db.System
         /// </summary>
         /// <param name="steamId"></param>
         /// <returns></returns>
-        public async Task<List<DbUser>> GetUsersByTribeAsync(int tribeId)
+        public async Task<List<DbUser>> GetUsersByTribeAsync(DeltaConnection conn, int tribeId)
         {
             //Get all player profiles
-            var profiles = await GetPlayerProfilesByTribeAsync(tribeId);
+            var profiles = await GetPlayerProfilesByTribeAsync(conn, tribeId);
 
             //Now, get all DbUsers
             List<DbUser> users = new List<DbUser>();
@@ -386,7 +384,7 @@ namespace LibDeltaSystem.Db.System
         /// </summary>
         /// <param name="display_name"></param>
         /// <returns></returns>
-        public static string StaticGetPlaceholderIcon(string display_name)
+        public static string StaticGetPlaceholderIcon(DeltaConnection conn, string display_name)
         {
             //Find letters
             string[] words = display_name.Split(' ');
@@ -412,7 +410,7 @@ namespace LibDeltaSystem.Db.System
             }
 
             //Now, return URL
-            return "https://icon-assets.deltamap.net/legacy/placeholder_server_images/" + output + ".png";
+            return conn.config.hosts.assets_icon + "/legacy/placeholder_server_images/" + output + ".png";
         }
 
         public bool IsUserAdmin(DbUser user)
@@ -425,7 +423,7 @@ namespace LibDeltaSystem.Db.System
         /// </summary>
         /// <param name="user_id"></param>
         /// <returns></returns>
-        public async Task<SavedUserServerPrefs> GetUserPrefs(string user_id)
+        public async Task<SavedUserServerPrefs> GetUserPrefs(DeltaConnection conn, string user_id)
         {
             var filterBuilder = Builders<DbSavedUserServerPrefs>.Filter;
             var filter = filterBuilder.Eq("server_id", id) & filterBuilder.Eq("user_id", user_id);

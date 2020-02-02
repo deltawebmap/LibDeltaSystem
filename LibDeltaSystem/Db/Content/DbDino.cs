@@ -163,7 +163,7 @@ namespace LibDeltaSystem.Db.Content
         {
             var filterBuilder = Builders<DbDino>.Filter;
             var filter = filterBuilder.Eq("dino_id", token) & filterBuilder.Eq("server_id", server.id);
-            var response = await server.conn.content_dinos.FindAsync(filter);
+            var response = await conn.content_dinos.FindAsync(filter);
             var dino = await response.FirstOrDefaultAsync();
             return dino;
         }

@@ -1,6 +1,4 @@
-﻿using FirebaseAdmin;
-using FirebaseAdmin.Messaging;
-using LibDeltaSystem.Db.ArkEntries;
+﻿using LibDeltaSystem.Db.ArkEntries;
 using LibDeltaSystem.Db.Content;
 using LibDeltaSystem.Db.System;
 using LibDeltaSystem.Db.System.Analytics;
@@ -324,7 +322,6 @@ namespace LibDeltaSystem
             DbOauthApp c = await result.FirstOrDefaultAsync();
             if (c == null)
                 return null;
-            c.conn = this;
             return c;
         }
 
@@ -341,7 +338,6 @@ namespace LibDeltaSystem
             DbUserContent c = await result.FirstOrDefaultAsync();
             if (c == null)
                 return null;
-            c.conn = this;
             return c;
         }
 
@@ -358,45 +354,7 @@ namespace LibDeltaSystem
             DbUserContent c = await result.FirstOrDefaultAsync();
             if (c == null)
                 return null;
-            c.conn = this;
             return c;
-        }
-
-        /// <summary>
-        /// Sends a Firebase notification to all users with this tribe. Returns number of successful notifications.
-        /// </summary>
-        /// <param name="server"></param>
-        /// <param name="tribe_id"></param>
-        /// <param name="body"></param>
-        /// <returns></returns>
-        public async Task<int> SendPushNotificationToTribe(DbServer server, int tribe_id, string body)
-        {
-            //Find all tokens to use
-            List<string> registrationTokens = new List<string>();
-            var users = await GetAllUsersInTribe(server.id, tribe_id);
-            foreach(var u in users)
-            {
-                if (u.notification_tokens != null)
-                    registrationTokens.AddRange(u.notification_tokens);
-            }
-
-            //Create message payload
-            var message = new MulticastMessage()
-            {
-                Tokens = registrationTokens,
-                Notification = new Notification
-                {
-                    ImageUrl = server.image_url,
-                    Title = server.display_name,
-                    Body = body
-                }
-            };
-
-            //Send
-            var response = await FirebaseMessaging.DefaultInstance.SendMulticastAsync(message);
-
-            //Return count
-            return response.SuccessCount;
         }
 
         /// <summary>
@@ -412,7 +370,6 @@ namespace LibDeltaSystem
             DbCanvas c = await result.FirstOrDefaultAsync();
             if (c == null)
                 return null;
-            c.conn = this;
             return c;
         }
 
@@ -595,8 +552,7 @@ namespace LibDeltaSystem
                 name = profileData.personaname,
                 profile_url = profileData.profileurl,
                 steam_id = profileData.steamid,
-                time_utc = DateTime.UtcNow.Ticks,
-                conn = this
+                time_utc = DateTime.UtcNow.Ticks
             };
 
             //Now, insert for future use
@@ -665,7 +621,6 @@ namespace LibDeltaSystem
             if (profiles.response.publishedfiledetails.Count != 1)
                 return null;
             profile = profiles.response.publishedfiledetails[0];
-            profile.conn = this;
 
             //Check profile
             if (profile.result != 1)
@@ -700,9 +655,6 @@ namespace LibDeltaSystem
             if (u == null)
                 return null;
 
-            //Add some props
-            u.conn = this;
-
             return u;
         }
 
@@ -719,9 +671,6 @@ namespace LibDeltaSystem
             //If not found, return null
             if (u == null)
                 return null;
-
-            //Add some props
-            u.conn = this;
 
             return u;
         }
@@ -743,10 +692,6 @@ namespace LibDeltaSystem
             var results = await system_servers.FindAsync(filter);
             var r = await results.ToListAsync();
 
-            //Add props
-            foreach (var rr in r)
-                rr.conn = this;
-
             return r;
         }
 
@@ -763,9 +708,6 @@ namespace LibDeltaSystem
             //If not found, return null
             if (u == null)
                 return null;
-
-            //Add some props
-            u.conn = this;
 
             return u;
         }
@@ -795,9 +737,6 @@ namespace LibDeltaSystem
             if (u.is_activated)
                 return null;
 
-            //Add some props
-            u.conn = this;
-
             return u;
         }
 
@@ -816,9 +755,6 @@ namespace LibDeltaSystem
             if (r == null)
                 return null;
 
-            //Set conn
-            r.conn = this;
-
             return r;
         }
 
@@ -836,9 +772,6 @@ namespace LibDeltaSystem
             var r = await results.FirstOrDefaultAsync();
             if (r == null)
                 return null;
-
-            //Set conn
-            r.conn = this;
 
             return r;
         }
@@ -861,9 +794,6 @@ namespace LibDeltaSystem
             if (r == null)
                 return null;
 
-            //Set conn
-            r.conn = this;
-
             return r;
         }
 
@@ -885,9 +815,6 @@ namespace LibDeltaSystem
             var r = await results.FirstOrDefaultAsync();
             if (r == null)
                 return null;
-
-            //Set conn
-            r.conn = this;
 
             return r;
         }
@@ -914,7 +841,6 @@ namespace LibDeltaSystem
             var filter = filterBuilder.Eq("token", token);
             var results = await system_machines.FindAsync(filter);
             var machine =  await results.FirstOrDefaultAsync();
-            machine.conn = this;
             return machine;
         }
 
@@ -932,7 +858,6 @@ namespace LibDeltaSystem
             var s = await results.FirstOrDefaultAsync();
             if (s == null)
                 return null;
-            s.conn = this;
             return s;
         }
 

@@ -66,7 +66,7 @@ namespace LibDeltaSystem.Db.Content
         {
             var filterBuilder = Builders<DbStructure>.Filter;
             var filter = filterBuilder.Eq("structure_id", token);
-            var response = await server.conn.content_structures.FindAsync(filter);
+            var response = await conn.content_structures.FindAsync(filter);
             var structure = await response.FirstOrDefaultAsync();
             return structure;
         }
@@ -78,11 +78,11 @@ namespace LibDeltaSystem.Db.Content
         /// <param name="server"></param>
         /// <param name="tribeId"></param>
         /// <returns></returns>
-        public async Task<List<DbItem>> GetItems(DbServer server)
+        public async Task<List<DbItem>> GetItems(DeltaConnection conn, DbServer server)
         {
             var filterBuilder = Builders<DbItem>.Filter;
             var filter = filterBuilder.Eq("server_id", server.id) & filterBuilder.Eq("tribe_id", tribe_id) & filterBuilder.Eq("parent_id", structure_id.ToString()) & filterBuilder.Eq("parent_type", DbInventoryParentType.Structure);
-            var response = await server.conn.content_items.FindAsync(filter);
+            var response = await conn.content_items.FindAsync(filter);
             var items = await response.ToListAsync();
             return items;
         }

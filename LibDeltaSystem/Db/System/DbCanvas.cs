@@ -74,14 +74,14 @@ namespace LibDeltaSystem.Db.System
         /// </summary>
         /// <param name="uc"></param>
         /// <returns></returns>
-        public async Task SetNewThumbnail(DbUserContent uc)
+        public async Task SetNewThumbnail(DeltaConnection conn, DbUserContent uc)
         {
             //Attempt to remove the old thumbnail
             if(thumbnail_token != null)
             {
                 DbUserContent old = await conn.GetUserContentByToken(thumbnail_token);
                 if (old != null)
-                    await old.DoDelete();
+                    await old.DoDelete(conn);
             }
 
             //Set details
@@ -103,7 +103,7 @@ namespace LibDeltaSystem.Db.System
         /// Renames a canvas by changing it's name and color
         /// </summary>
         /// <returns></returns>
-        public async Task RenameCanvas(string name, string color)
+        public async Task RenameCanvas(DeltaConnection conn, string name, string color)
         {
             var updateBuilder = Builders<DbCanvas>.Update;
             var update = updateBuilder.Set("name", name).Set("color", color);
@@ -118,7 +118,7 @@ namespace LibDeltaSystem.Db.System
         /// Deletes a canvas from the database
         /// </summary>
         /// <returns></returns>
-        public async Task DeleteCanvas()
+        public async Task DeleteCanvas(DeltaConnection conn)
         {
             var filterBuilder = Builders<DbCanvas>.Filter;
             var filter = filterBuilder.Eq("_id", _id);

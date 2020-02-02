@@ -56,9 +56,9 @@ namespace LibDeltaSystem.Db.System
         /// <summary>
         /// Updates this in the database
         /// </summary>
-        public void Update()
+        public void Update(DeltaConnection conn)
         {
-            UpdateAsync().GetAwaiter().GetResult();
+            UpdateAsync(conn).GetAwaiter().GetResult();
         }
 
         /// <summary>
@@ -74,12 +74,12 @@ namespace LibDeltaSystem.Db.System
         /// Generates the server creation token
         /// </summary>
         /// <returns></returns>
-        public async Task<string> GetServerCreationToken()
+        public async Task<string> GetServerCreationToken(DeltaConnection conn)
         {
             if (server_creation_token == null)
             {
                 server_creation_token = Tools.SecureStringTool.GenerateSecureString(44);
-                await UpdateAsync();
+                await UpdateAsync(conn);
             }
             return server_creation_token;
         }
@@ -88,7 +88,7 @@ namespace LibDeltaSystem.Db.System
         /// Updates this in the database async
         /// </summary>
         /// <returns></returns>
-        public async Task UpdateAsync()
+        public async Task UpdateAsync(DeltaConnection conn)
         {
             var filterBuilder = Builders<DbUser>.Filter;
             var filter = filterBuilder.Eq("_id", _id);
@@ -99,7 +99,7 @@ namespace LibDeltaSystem.Db.System
         /// Deletes this in the database async
         /// </summary>
         /// <returns></returns>
-        public async Task DeleteAsync()
+        public async Task DeleteAsync(DeltaConnection conn)
         {
             var filterBuilder = Builders<DbUser>.Filter;
             var filter = filterBuilder.Eq("_id", _id);
@@ -110,9 +110,9 @@ namespace LibDeltaSystem.Db.System
         /// Returns servers this member is part of. Does not include servers that they own but do not play on.
         /// </summary>
         /// <returns></returns>
-        public List<Tuple<DbServer, DbPlayerProfile>> GetGameServers()
+        public List<Tuple<DbServer, DbPlayerProfile>> GetGameServers(DeltaConnection conn)
         {
-            return GetGameServersAsync().GetAwaiter().GetResult();
+            return GetGameServersAsync(conn).GetAwaiter().GetResult();
         }
 
         /// <summary>
@@ -129,7 +129,7 @@ namespace LibDeltaSystem.Db.System
         /// Returns servers this member is part of. Does not include servers that they own but do not play on.
         /// </summary>
         /// <returns></returns>
-        public async Task<List<Tuple<DbServer, DbPlayerProfile>>> GetGameServersAsync()
+        public async Task<List<Tuple<DbServer, DbPlayerProfile>>> GetGameServersAsync(DeltaConnection conn)
         {
             //Search for player profiles
             var filterBuilder = Builders<DbPlayerProfile>.Filter;
@@ -161,7 +161,7 @@ namespace LibDeltaSystem.Db.System
         /// Returns servers that this user owns, but might not actually play on.
         /// </summary>
         /// <returns></returns>
-        public async Task<List<DbServer>> GetOwnedServersAsync()
+        public async Task<List<DbServer>> GetOwnedServersAsync(DeltaConnection conn)
         {
             //Search for servers we own
             var filterBuilder = Builders<DbServer>.Filter;
@@ -174,7 +174,7 @@ namespace LibDeltaSystem.Db.System
         /// Generates a random token
         /// </summary>
         /// <returns></returns>
-        public async Task<string> MakeToken()
+        public async Task<string> MakeToken(DeltaConnection conn)
         {
             //Generate a unique string
             string token = Tools.SecureStringTool.GenerateSecureString(64);
@@ -201,7 +201,7 @@ namespace LibDeltaSystem.Db.System
         /// Generates a random token
         /// </summary>
         /// <returns></returns>
-        public async Task<DbToken> MakeOAuthToken(DbOauthApp app, string[] scopes)
+        public async Task<DbToken> MakeOAuthToken(DeltaConnection conn, DbOauthApp app, string[] scopes)
         {
             //Generate a unique string
             string token = Tools.SecureStringTool.GenerateSecureString(64);
@@ -237,7 +237,7 @@ namespace LibDeltaSystem.Db.System
         /// Finds and devalidates all tokens belonging to this user.
         /// </summary>
         /// <returns></returns>
-        public async Task<long> DevalidateAllTokens()
+        public async Task<long> DevalidateAllTokens(DeltaConnection conn)
         {
             //Search for all
             var filterBuilder = Builders<DbToken>.Filter;
@@ -265,8 +265,7 @@ namespace LibDeltaSystem.Db.System
                     steam_profile_url = profile.profile_url,
                     screen_name = profile.name,
                     steam_id = profile.steam_id,
-                    _id = MongoDB.Bson.ObjectId.GenerateNewId(),
-                    conn = conn
+                    _id = MongoDB.Bson.ObjectId.GenerateNewId()
                 };
 
                 //Insert in the database

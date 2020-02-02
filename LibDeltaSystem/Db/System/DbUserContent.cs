@@ -63,7 +63,7 @@ namespace LibDeltaSystem.Db.System
         /// Flags this image for removal
         /// </summary>
         /// <returns></returns>
-        public async Task DoDelete()
+        public async Task DoDelete(DeltaConnection conn)
         {
             var updateBuilder = Builders<DbUserContent>.Update;
             var update = updateBuilder.Set("deleted", true);

@@ -71,16 +71,16 @@ namespace LibDeltaSystem.Db.System
         /// <summary>
         /// Updates this in the database
         /// </summary>
-        public void Update()
+        public void Update(DeltaConnection conn)
         {
-            UpdateAsync().GetAwaiter().GetResult();
+            UpdateAsync(conn).GetAwaiter().GetResult();
         }
 
         /// <summary>
         /// Updates this in the database async
         /// </summary>
         /// <returns></returns>
-        public async Task UpdateAsync()
+        public async Task UpdateAsync(DeltaConnection conn)
         {
             var filterBuilder = Builders<DbToken>.Filter;
             var filter = filterBuilder.Eq("_id", _id);
@@ -91,7 +91,7 @@ namespace LibDeltaSystem.Db.System
         /// Deletes this in the database async
         /// </summary>
         /// <returns></returns>
-        public async Task DeleteAsync()
+        public async Task DeleteAsync(DeltaConnection conn)
         {
             var filterBuilder = Builders<DbToken>.Filter;
             var filter = filterBuilder.Eq("_id", _id);

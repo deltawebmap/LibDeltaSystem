@@ -84,7 +84,6 @@ namespace LibDeltaSystem.Db.System
             //Create an object
             DbMachine machine = new DbMachine
             {
-                conn = conn,
                 name = name,
                 owner_id = owner.ToString(),
                 owner_type = owner_type,
@@ -106,7 +105,7 @@ namespace LibDeltaSystem.Db.System
         /// Gets servers that this machine operates
         /// </summary>
         /// <returns></returns>
-        public async Task<List<DbServer>> GetServersAsync()
+        public async Task<List<DbServer>> GetServersAsync(DeltaConnection conn)
         {
             var filterBuilder = Builders<DbServer>.Filter;
             var filter = filterBuilder.Eq("machine_uid", id);
@@ -117,16 +116,16 @@ namespace LibDeltaSystem.Db.System
         /// <summary>
         /// Updates this in the database
         /// </summary>
-        public void Update()
+        public void Update(DeltaConnection conn)
         {
-            UpdateAsync().GetAwaiter().GetResult();
+            UpdateAsync(conn).GetAwaiter().GetResult();
         }
 
         /// <summary>
         /// Updates this in the database async
         /// </summary>
         /// <returns></returns>
-        public async Task UpdateAsync()
+        public async Task UpdateAsync(DeltaConnection conn)
         {
             var filterBuilder = Builders<DbMachine>.Filter;
             var filter = filterBuilder.Eq("_id", _id);
@@ -137,7 +136,7 @@ namespace LibDeltaSystem.Db.System
         /// Deletes this in the database async
         /// </summary>
         /// <returns></returns>
-        public async Task DeleteAsync()
+        public async Task DeleteAsync(DeltaConnection conn)
         {
             var filterBuilder = Builders<DbMachine>.Filter;
             var filter = filterBuilder.Eq("_id", _id);

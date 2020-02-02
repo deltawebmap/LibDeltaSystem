@@ -24,12 +24,5 @@ namespace LibDeltaSystem.Db.System
         /// </summary>
         [BsonIgnore]
         public string id { get { return _id.ToString(); } }
-
-        /// <summary>
-        /// The connection. This will use this to update or modify.
-        /// </summary>
-        [BsonIgnore]
-        [Newtonsoft.Json.JsonIgnore]
-        public DeltaConnection conn;
     }
 }
