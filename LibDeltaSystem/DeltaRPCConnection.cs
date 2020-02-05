@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using LibDeltaSystem.Tools.InternalComms;
 using LibDeltaSystem.RPC.Payloads;
 using LibDeltaSystem.Entities.Notifications;
+using MongoDB.Bson;
 
 namespace LibDeltaSystem
 {
@@ -114,7 +115,7 @@ namespace LibDeltaSystem
         /// <param name="payload">Message payload</param>
         /// <param name="server">Server</param>
         /// <returns></returns>
-        public void SendRPCMessageToServer(RPCOpcode opcode, RPCPayload payload, DbServer server, RPCType type = RPCType.RPC)
+        public void SendRPCMessageToServer(RPCOpcode opcode, RPCPayload payload, ObjectId server, RPCType type = RPCType.RPC)
         {
             //Create filter to use
             RPCFilter filter = new RPCFilter
@@ -122,12 +123,24 @@ namespace LibDeltaSystem
                 type = "SERVER",
                 keys = new Dictionary<string, string>
                 {
-                    {"SERVER_ID", server.id }
+                    {"SERVER_ID", server.ToString() }
                 }
             };
 
             //Send
-            SendRPCMessage(opcode, server.id, payload, filter, type);
+            SendRPCMessage(opcode, server.ToString(), payload, filter, type);
+        }
+
+        /// <summary>
+        /// Sends a message to all users on a server
+        /// </summary>
+        /// <param name="opcode">Message opcode</param>
+        /// <param name="payload">Message payload</param>
+        /// <param name="server">Server</param>
+        /// <returns></returns>
+        public void SendRPCMessageToServer(RPCOpcode opcode, RPCPayload payload, DbServer server, RPCType type = RPCType.RPC)
+        {
+            SendRPCMessageToServer(opcode, payload, server._id, type);
         }
 
         /// <summary>
@@ -151,6 +164,18 @@ namespace LibDeltaSystem
 
             //Send
             SendRPCMessage(opcode, null, payload, filter, type);
+        }
+
+        /// <summary>
+        /// Sends a message to a user
+        /// </summary>
+        /// <param name="opcode">Message opcode</param>
+        /// <param name="payload">Message payload</param>
+        /// <param name="user">User</param>
+        /// <returns></returns>
+        public void SendRPCMessageToUser(RPCOpcode opcode, RPCPayload payload, ObjectId user_id, RPCType type = RPCType.RPC)
+        {
+            SendRPCMessageToUser(opcode, payload, user_id.ToString(), type);
         }
 
         /// <summary>

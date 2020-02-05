@@ -1,6 +1,7 @@
 ﻿using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -17,12 +18,14 @@ namespace LibDeltaSystem.Db.System
         /// ID used internally that shouldn't be touched by us
         /// </summary>
         [BsonIgnoreIfDefault]
+        [JsonProperty("id")]
         public ObjectId _id { get; set; }
 
         /// <summary>
         /// The ID that is easy to access
         /// </summary>
         [BsonIgnore]
+        [JsonIgnore]
         public string id { get { return _id.ToString(); } }
     }
 }

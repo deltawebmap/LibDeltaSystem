@@ -54,6 +54,7 @@ namespace LibDeltaSystem
         public IMongoCollection<DbOauthApp> system_oauth_apps;
         public IMongoCollection<DbCluster> system_clusters;
         public IMongoCollection<DbModTimeAnalyticsObject> system_analytics_time;
+        public IMongoCollection<DbAlertBanner> system_alert_banners;
 
         public IMongoCollection<DbArkEntry<DinosaurEntry>> arkentries_dinos;
         public IMongoCollection<DbArkEntry<ItemEntry>> arkentries_items;
@@ -117,6 +118,7 @@ namespace LibDeltaSystem
             system_oauth_apps = system_database.GetCollection<DbOauthApp>("oauth_apps");
             system_clusters = system_database.GetCollection<DbCluster>("clusters");
             system_analytics_time = system_database.GetCollection<DbModTimeAnalyticsObject>("analytics_time");
+            system_alert_banners = system_database.GetCollection<DbAlertBanner>("alert_banners");
 
             charlie_database = content_client.GetDatabase("delta-" + config.env + "-charlie");
             arkentries_dinos = charlie_database.GetCollection<DbArkEntry<DinosaurEntry>>("dino_entries");

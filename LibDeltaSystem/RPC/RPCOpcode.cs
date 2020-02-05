@@ -14,5 +14,6 @@ namespace LibDeltaSystem.RPC
         DinoPrefsChanged = 5, //Called when dino prefs change
         PutNotification = 6, //Sends a new notification
         LiveUpdate = 7, //An update to the live endpoint
+        AlertBannerPush = 8, //An alert banner was added
     }
 }
