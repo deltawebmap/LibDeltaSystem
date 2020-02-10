@@ -23,6 +23,9 @@ namespace LibDeltaSystem
 {
     public class DeltaConnection
     {
+        public const int LIB_VERSION_MAJOR = 0;
+        public const int LIB_VERSION_MINOR = 1;
+        
         private MongoClient content_client;
         private IMongoDatabase content_database;
         private IMongoDatabase system_database;
@@ -224,9 +227,14 @@ namespace LibDeltaSystem
 
         private static async Task<T> GetDocumentById<T>(IMongoCollection<T> collec, string id)
         {
+            return await GetDocumentById<T>(collec, ObjectId.Parse(id));
+        }
+
+        private static async Task<T> GetDocumentById<T>(IMongoCollection<T> collec, ObjectId id)
+        {
             //Find
             var filterBuilder = Builders<T>.Filter;
-            var filter = filterBuilder.Eq("_id", ObjectId.Parse(id));
+            var filter = filterBuilder.Eq("_id", id);
             var results = await collec.FindAsync(filter);
             var r = await results.FirstOrDefaultAsync();
             return r;
@@ -666,6 +674,16 @@ namespace LibDeltaSystem
         /// <param name="id"></param>
         /// <returns></returns>
         public async Task<DbServer> GetServerByIdAsync(string id)
+        {
+            return await GetServerByIdAsync(ObjectId.Parse(id));
+        }
+
+        /// <summary>
+        /// Returns a user by their user ID. Returns null if not found.
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        public async Task<DbServer> GetServerByIdAsync(ObjectId id)
         {
             //Fetch
             DbServer u = await GetDocumentById<DbServer>(system_servers, id);
