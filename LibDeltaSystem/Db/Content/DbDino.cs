@@ -144,6 +144,16 @@ namespace LibDeltaSystem.Db.Content
         public float experience_points { get; set; }
 
         /// <summary>
+        /// The last time this was synced from ARK
+        /// </summary>
+        public DateTime last_sync_time { get; set; }
+
+        /// <summary>
+        /// The last time any attribute in here was updated
+        /// </summary>
+        public DateTime last_update_time { get; set; }
+
+        /// <summary>
         /// Returns this dino's prefs. Will never return null.
         /// </summary>
         /// <param name="conn"></param>

@@ -17,12 +17,7 @@ namespace LibDeltaSystem.Db.System
         /// <summary>
         /// User IDs
         /// </summary>
-        public ObjectId[] users { get; set; }
-
-        /// <summary>
-        /// Index in the users array to begin writing
-        /// </summary>
-        public int user_index { get; set; }
+        public List<ObjectId> users { get; set; }
 
         /// <summary>
         /// Data type version
@@ -68,6 +63,33 @@ namespace LibDeltaSystem.Db.System
         /// The time this thumbnail was saved
         /// </summary>
         public DateTime thumbnail_time { get; set; }
+
+        /// <summary>
+        /// Finds a canvas by it's ID and returns it
+        /// </summary>
+        /// <param name="conn"></param>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        public static async Task<DbCanvas> GetCanvasById(DeltaConnection conn, ObjectId id)
+        {
+            var filterBuilder = Builders<DbCanvas>.Filter;
+            var filter = filterBuilder.Eq("_id", id);
+            var result = await conn.system_canvases.FindAsync(filter);
+            return await result.FirstOrDefaultAsync();
+        }
+
+        /// <summary>
+        /// Renames a canvas by changing it's name and color
+        /// </summary>
+        /// <returns></returns>
+        public async Task UpdateUsers(DeltaConnection conn)
+        {
+            var updateBuilder = Builders<DbCanvas>.Update;
+            var update = updateBuilder.Set("users", users);
+            var filterBuilder = Builders<DbCanvas>.Filter;
+            var filter = filterBuilder.Eq("_id", _id);
+            await conn.system_canvases.UpdateOneAsync(filter, update);
+        }
 
         /// <summary>
         /// Sets a new thumbnail

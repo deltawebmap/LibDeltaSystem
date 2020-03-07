@@ -17,11 +17,20 @@ namespace LibDeltaSystem.WebFramework
         public HttpContext e;
         public string method;
 
+        private DateTime start;
+        private DateTime checkpoint;
+        private int checkpoint_index;
+        private string checkpoint_name;
+
         public DeltaWebService(DeltaConnection conn, HttpContext e)
         {
             this.e = e;
             this.conn = conn;
             this.method = e.Request.Method.ToUpper();
+            start = DateTime.UtcNow;
+            checkpoint = start;
+            checkpoint_index = 0;
+            checkpoint_name = "Default";
         }
 
         /// <summary>
@@ -51,6 +60,7 @@ namespace LibDeltaSystem.WebFramework
         /// <returns></returns>
         public async Task WriteString(string data, string type, int code = 200)
         {
+            EndDebugCheckpoint("Output Writing");
             var response = e.Response;
             response.StatusCode = code;
             response.ContentType = type;
@@ -89,6 +99,19 @@ namespace LibDeltaSystem.WebFramework
 
             //Assume this is JSON
             return JsonConvert.DeserializeObject<T>(buffer);
+        }
+
+        /// <summary>
+        /// Ends the laest checkpoint and logs data if debug mode is on
+        /// </summary>
+        public void EndDebugCheckpoint(string name)
+        {
+            if (!conn.debug_mode)
+                return;
+            e.Response.Headers.Add("X-DeltaDebugCheckpoint-" + checkpoint_index, $"{checkpoint_name} / {Math.Round((DateTime.UtcNow - checkpoint).TotalMilliseconds)}ms / {Math.Round((DateTime.UtcNow - start).TotalMilliseconds)}ms");
+            checkpoint_index++;
+            checkpoint = DateTime.UtcNow;
+            checkpoint_name = name;
         }
     }
 }

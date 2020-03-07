@@ -42,6 +42,7 @@ namespace LibDeltaSystem
 
         public IMongoCollection<DbUser> system_users;
         public IMongoCollection<DbToken> system_tokens;
+        public IMongoCollection<DbPreflightToken> system_preflight_tokens;
         public IMongoCollection<DbServer> system_servers;
         public IMongoCollection<DbMachine> system_machines;
         public IMongoCollection<DbSteamCache> system_steam_cache;
@@ -106,6 +107,7 @@ namespace LibDeltaSystem
             system_database = content_client.GetDatabase("delta-" + config.env + "-system");
             system_users = system_database.GetCollection<DbUser>("users");
             system_tokens = system_database.GetCollection<DbToken>("tokens");
+            system_preflight_tokens = system_database.GetCollection<DbPreflightToken>("preflight_tokens");
             system_servers = system_database.GetCollection<DbServer>("servers");
             system_machines = system_database.GetCollection<DbMachine>("machines");
             system_steam_cache = system_database.GetCollection<DbSteamCache>("steam_cache");
@@ -240,6 +242,24 @@ namespace LibDeltaSystem
             return r;
         }
 
+        public static async Task<bool> UpdateDocumentById<T>(IMongoCollection<T> collec, ObjectId id, UpdateDefinition<T> update)
+        {
+            //Find
+            var filterBuilder = Builders<T>.Filter;
+            var filter = filterBuilder.Eq("_id", id);
+            var results = await collec.UpdateOneAsync(filter, update);
+            return results.MatchedCount == 1;
+        }
+
+        public async Task<DbPreflightToken> GetPreflightTokenByTokenAsync(string s)
+        {
+            var filterBuilder = Builders<DbPreflightToken>.Filter;
+            var filter = filterBuilder.Eq("preflight_token", s);
+            var results = await system_preflight_tokens.FindAsync(filter);
+            var r = await results.FirstOrDefaultAsync();
+            return r;
+        }
+
         /// <summary>
         /// Gets an ARK map by it's internal ARK name (for example, "ScorchedEarth_P")
         /// </summary>
@@ -262,13 +282,13 @@ namespace LibDeltaSystem
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        public async Task<List<ArkMapEntry>> GetARKMaps()
+        public async Task<Dictionary<string, ArkMapEntry>> GetARKMaps()
         {
             var results = await arkentries_maps.FindAsync(FilterDefinition<DbArkMapEntry>.Empty);
             var resultsList = await results.ToListAsync();
-            List<ArkMapEntry> output = new List<ArkMapEntry>();
+            Dictionary<string, ArkMapEntry> output = new Dictionary<string, ArkMapEntry>();
             foreach (var r in resultsList)
-                output.Add(r.data);
+                output.Add(r.internalName, r.data);
             return output;
         }
 
@@ -317,6 +337,12 @@ namespace LibDeltaSystem
                     _supportedStructureMetadatas.AddRange(s.names);
             }
             return _structureMetadatas;
+        }
+
+        public List<string> GetSupportedStructureMetadata()
+        {
+            GetStructureMetadata();
+            return _supportedStructureMetadatas;
         }
 
         /// <summary>

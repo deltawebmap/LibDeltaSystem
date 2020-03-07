@@ -51,6 +51,7 @@ namespace LibDeltaSystem.WebFramework.ServiceTemplates
             }
 
             //Check
+            EndDebugCheckpoint("Check Tribe Authentication");
             if (!await CheckIfTribeIdAllowed(myTribeId))
             {
                 await WriteString("Tribe Not Authenticated", "text/plain", 403);
@@ -62,6 +63,7 @@ namespace LibDeltaSystem.WebFramework.ServiceTemplates
             if(myTribeId.HasValue)
             {
                 //Get tribe info
+                EndDebugCheckpoint("Get tribe info");
                 tribe = await conn.GetTribeByTribeIdAsync(server.id, myTribeId.Value);
 
                 //Make sure we got data

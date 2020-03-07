@@ -7,7 +7,9 @@ namespace LibDeltaSystem
     public class DeltaConnectionConfig
     {
         public string env;
-        public string mongodb_connection; //MongoDB connection string
+        public Dictionary<string, DeltaConnectionConfig_Enviornment> enviornments;
+
+        public string mongodb_connection { get { return enviornments[env].mongodb_connection; } }
 
         public string rpc_key; //64 bytes of Base-64 encoded content to be kept as a private key
         public int rpc_port; //Port to use when communicating with the RPC
@@ -21,6 +23,11 @@ namespace LibDeltaSystem
         public bool debug_mode;
 
         public DeltaConnectionConfig_Hosts hosts;
+    }
+
+    public class DeltaConnectionConfig_Enviornment
+    {
+        public string mongodb_connection;  //MongoDB connection string
     }
 
     public class DeltaConnectionConfig_Hosts

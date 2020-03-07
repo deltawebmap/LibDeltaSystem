@@ -436,11 +436,12 @@ namespace LibDeltaSystem.Db.System
             {
                 return new SavedUserServerPrefs
                 {
-                    x = 128,
-                    y = -128,
-                    z = 2,
-                    map = 0,
-                    drawable_map = null
+                    saved_map_pos = new DbVector3
+                    {
+                        x = 0,
+                        y = 0,
+                        z = 2
+                    }
                 };
             }
         }

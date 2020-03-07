@@ -42,6 +42,7 @@ namespace LibDeltaSystem.WebFramework
 
         public void Configure(IApplicationBuilder app)
         {
+            app.UseWebSockets();
             app.Run(OnHTTPRequest);
         }
 
@@ -86,16 +87,23 @@ namespace LibDeltaSystem.WebFramework
             //Create a new session
             DeltaWebService session = service.OpenRequest(conn, e);
 
-            //Preauthenticate this session
-            if (!await session.OnPreRequest())
-                return;
+            try
+            {
+                //Preauthenticate this session
+                if (!await session.OnPreRequest())
+                    return;
 
-            //Set args on this session
-            if (!await session.SetArgs(args))
-                return;
+                //Set args on this session
+                if (!await session.SetArgs(args))
+                    return;
 
-            //Run the actual code
-            await session.OnRequest();
+                //Run the actual code
+                await session.OnRequest();
+            } catch (Exception ex)
+            {
+                //TODO: Log this
+                Console.WriteLine($"SERVER ERROR {ex.Message} @ {ex.StackTrace}");
+            }
         }
 
         /// <summary>

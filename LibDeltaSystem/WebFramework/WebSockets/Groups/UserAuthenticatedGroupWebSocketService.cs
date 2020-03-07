@@ -5,9 +5,12 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LibDeltaSystem.WebFramework.ServiceTemplates
+namespace LibDeltaSystem.WebFramework.WebSockets.Groups
 {
-    public abstract class UserAuthDeltaService : DeltaWebService
+    /// <summary>
+    /// Simply authenticates a user before continuing. Does not do anything additional with groups
+    /// </summary>
+    public abstract class UserAuthenticatedGroupWebSocketService : GroupWebSocketService
     {
         /// <summary>
         /// The user authenticated
@@ -18,8 +21,8 @@ namespace LibDeltaSystem.WebFramework.ServiceTemplates
         /// The token used to issue this request
         /// </summary>
         public DbToken token;
-        
-        public UserAuthDeltaService(DeltaConnection conn, HttpContext e) : base(conn, e)
+
+        public UserAuthenticatedGroupWebSocketService(DeltaConnection conn, HttpContext e) : base(conn, e)
         {
         }
 
@@ -27,7 +30,7 @@ namespace LibDeltaSystem.WebFramework.ServiceTemplates
         {
             //Get token
             string tokenString = GetAuthToken();
-            if(tokenString == null)
+            if (tokenString == null)
             {
                 await WriteString("Not Authorized", "text/plain", 401);
                 return false;
@@ -56,12 +59,9 @@ namespace LibDeltaSystem.WebFramework.ServiceTemplates
 
         private string GetAuthToken()
         {
-            if (!e.Request.Headers.ContainsKey("authorization"))
+            if (!e.Request.Query.ContainsKey("access_token"))
                 return null;
-            string h = e.Request.Headers["authorization"];
-            if (!h.StartsWith("Bearer "))
-                return null;
-            return h.Substring("Bearer ".Length);
+            return e.Request.Query["access_token"];
         }
     }
 }

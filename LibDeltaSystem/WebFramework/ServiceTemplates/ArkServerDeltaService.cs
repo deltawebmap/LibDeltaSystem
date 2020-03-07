@@ -33,6 +33,7 @@ namespace LibDeltaSystem.WebFramework.ServiceTemplates
             }
 
             //Get this server
+            EndDebugCheckpoint("Get Server");
             server = await conn.GetServerByIdAsync(server_id);
             if(server == null)
             {
