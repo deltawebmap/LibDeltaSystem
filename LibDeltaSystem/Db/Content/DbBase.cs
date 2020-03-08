@@ -23,7 +23,7 @@ namespace LibDeltaSystem.Db.Content
         /// Server this dinosaur belongs to
         /// </summary>
         [JsonIgnore]
-        public string server_id { get; set; }
+        public ObjectId server_id { get; set; }
 
         /// <summary>
         /// The tribe ID this dinosaur belongs to

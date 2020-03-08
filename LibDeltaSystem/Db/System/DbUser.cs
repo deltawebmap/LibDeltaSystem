@@ -168,7 +168,7 @@ namespace LibDeltaSystem.Db.System
             var profilesList = await profiles.ToListAsync();
 
             //Now, find all servers
-            List<string> serverIds = new List<string>();
+            List<ObjectId> serverIds = new List<ObjectId>();
             List<Tuple<DbServer, DbPlayerProfile>> servers = new List<Tuple<DbServer, DbPlayerProfile>>();
             foreach(var p in profilesList)
             {

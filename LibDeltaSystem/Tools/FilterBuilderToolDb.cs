@@ -12,9 +12,9 @@ namespace LibDeltaSystem.Tools
         {
             var filterBuilder = Builders<T>.Filter;
             if (tribeId.HasValue)
-                return filterBuilder.Eq("server_id", server.id) & filterBuilder.Eq("tribe_id", tribeId);
+                return filterBuilder.Eq("server_id", server._id) & filterBuilder.Eq("tribe_id", tribeId);
             else
-                return filterBuilder.Eq("server_id", server.id);
+                return filterBuilder.Eq("server_id", server._id);
         }
     }
 }

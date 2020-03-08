@@ -29,9 +29,9 @@ namespace LibDeltaSystem.Db.Content
         public bool is_female { get; set; }
 
         /// <summary>
-        /// Colors in hex format
+        /// Color indexes of the dino. ALWAYS 6 items in size- regardless of actual size
         /// </summary>
-        public string[] colors { get; set; }
+        public int[] color_indexes { get; set; }
 
         /// <summary>
         /// The tamed name
@@ -154,14 +154,14 @@ namespace LibDeltaSystem.Db.Content
         public DateTime last_update_time { get; set; }
 
         /// <summary>
-        /// Returns this dino's prefs. Will never return null.
+        /// Tribe prefs
         /// </summary>
-        /// <param name="conn"></param>
-        /// <returns></returns>
-        public async Task<SavedDinoTribePrefs> GetPrefs(DeltaConnection conn)
-        {
-            return await conn.GetDinoPrefs(ObjectId.Parse(server_id), tribe_id, dino_id);
-        }
+        public SavedDinoTribePrefs prefs { get; set; }
+
+        /// <summary>
+        /// Is this dino alive?
+        /// </summary>
+        public bool is_alive { get; set; }
 
         /// <summary>
         /// Gets a dinosaur by it's ID from a server
@@ -172,7 +172,7 @@ namespace LibDeltaSystem.Db.Content
         public static async Task<DbDino> GetDinosaurByID(DeltaConnection conn, ulong token, DbServer server)
         {
             var filterBuilder = Builders<DbDino>.Filter;
-            var filter = filterBuilder.Eq("dino_id", token) & filterBuilder.Eq("server_id", server.id);
+            var filter = filterBuilder.Eq("dino_id", token) & filterBuilder.Eq("server_id", server._id);
             var response = await conn.content_dinos.FindAsync(filter);
             var dino = await response.FirstOrDefaultAsync();
             return dino;
