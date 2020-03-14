@@ -38,11 +38,6 @@ namespace LibDeltaSystem.Db.System
         public DbUserSettings user_settings { get; set; }
 
         /// <summary>
-        /// Tokens for sending Firebase notifications
-        /// </summary>
-        public List<string> notification_tokens { get; set; }
-
-        /// <summary>
         /// Token used for server creation
         /// </summary>
         public string server_creation_token { get; set; }
@@ -51,12 +46,6 @@ namespace LibDeltaSystem.Db.System
         /// Contains all alert banners that have been dismissed
         /// </summary>
         public List<ObjectId> dismissed_alert_banners { get; set; } = new List<ObjectId>();
-
-        /// <summary>
-        /// Token that was used to authenticate this user
-        /// </summary>
-        [BsonIgnore]
-        private DbToken _token { get; set; }
 
         /// <summary>
         /// Returns a cursor to get alert banners
@@ -89,15 +78,6 @@ namespace LibDeltaSystem.Db.System
         public void Update(DeltaConnection conn)
         {
             UpdateAsync(conn).GetAwaiter().GetResult();
-        }
-
-        /// <summary>
-        /// Gets the token used to authenticate this user
-        /// </summary>
-        /// <returns></returns>
-        public DbToken GetAuthenticatedToken()
-        {
-            return _token;
         }
 
         /// <summary>
@@ -332,7 +312,6 @@ namespace LibDeltaSystem.Db.System
             var u = await conn.GetUserByIdAsync(tok.user_id);
             if (u == null)
                 return null;
-            u._token = tok;
             return u;
         }
     }

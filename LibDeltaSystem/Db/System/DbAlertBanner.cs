@@ -57,17 +57,7 @@ namespace LibDeltaSystem.Db.System
                 _id = ObjectId.GenerateNewId()
             };
 
-            //Create RPC payload for this
-            RPCPayloadAlertBannerPush payload = new RPCPayloadAlertBannerPush
-            {
-                banner = banner
-            };
-
-            //Send out an RPC message notifiying clients of this
-            if(targetUser != null)
-                conn.GetRPC().SendRPCMessageToUser(RPC.RPCOpcode.AlertBannerPush, payload, targetUser.Value, RPCType.RPC);
-            else
-                conn.GetRPC().SendRPCMessageToServer(RPC.RPCOpcode.AlertBannerPush, payload, targetServer.Value, RPCType.RPC);
+            //TODO: Send RPC messages!
 
             //Push to DB
             await conn.system_alert_banners.InsertOneAsync(banner);

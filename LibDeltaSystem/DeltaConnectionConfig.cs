@@ -11,7 +11,7 @@ namespace LibDeltaSystem
 
         public string mongodb_connection { get { return enviornments[env].mongodb_connection; } }
 
-        public string rpc_key; //64 bytes of Base-64 encoded content to be kept as a private key
+        public string rpc_key; //256 bytes of Base-64 encoded content to be kept as a private key
         public int rpc_port; //Port to use when communicating with the RPC
         public string rpc_ip; //RPC port. MUST be an actual port, not a hostname
 

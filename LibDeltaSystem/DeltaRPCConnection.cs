@@ -1,199 +1,241 @@
 ﻿using LibDeltaSystem.Tools;
 using System;
 using System.Collections.Generic;
-using System.Collections.Concurrent;
-using System.Net;
-using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using LibDeltaSystem.RPC;
 using Newtonsoft.Json;
 using LibDeltaSystem.Db.System;
 using System.Threading.Tasks;
-using LibDeltaSystem.Tools.InternalComms;
-using LibDeltaSystem.RPC.Payloads;
-using LibDeltaSystem.Entities.Notifications;
 using MongoDB.Bson;
+using System.Net.WebSockets;
+using System.Collections.Concurrent;
 
 namespace LibDeltaSystem
 {
-    public class DeltaRPCConnection : InternalCommClient
+    public class DeltaRPCConnection
     {
-        public DeltaRPCConnection(DeltaConnection conn, byte[] key, IPEndPoint endpoint) : base(conn, key, endpoint)
-        {
+        private bool _connected;
+        private ConcurrentQueue<byte[]> _queue;
+        private ClientWebSocket _sock;
+        private ulong _index = 1;
+        private DeltaConnection _conn;
+        private Task _reconnectTask;
 
+        public DeltaRPCConnection(DeltaConnection conn)
+        {
+            _conn = conn;
+            _connected = false;
+            _queue = new ConcurrentQueue<byte[]>();
+            _reconnectTask = _Reconnect();
         }
 
-        public static RPCPayloadPutNotification GetNotificationPayload(PushNotificationDisplayInfo info, DbServer targetServer = null)
+        private void _OnDisconnect()
         {
-            PushNotification n = new PushNotification
+            _connected = false;
+            if (_reconnectTask == null)
+                _reconnectTask = _Reconnect();
+        }
+
+        private async Task _Reconnect()
+        {
+            await Task.Delay(2000);
+            await _OpenConnection();
+        }
+
+        private async Task _OpenConnection()
+        {
+            _reconnectTask = null;
+            _connected = false;
+
+            //If old client exists, make sure it is closed
+            if(_sock != null)
             {
-                info = info,
-                id = new Random().Next(),
-                server = null
-            };
-            if(targetServer != null)
-            {
-                n.server = new PushNotificationServer
+                if(_sock.State != WebSocketState.Closed && _sock.State != WebSocketState.Aborted)
                 {
-                    icon = targetServer.image_url,
-                    id = targetServer.id,
-                    name = targetServer.display_name
-                };
+                    try
+                    {
+                        _Log("CONNECT", "Disconnecting old client...");
+                        await _sock.CloseAsync(WebSocketCloseStatus.InternalServerError, "DELTA_DISCONNECT_GENERIC", CancellationToken.None);
+                    }
+                    catch { }
+                }
             }
-            return new RPCPayloadPutNotification
+
+            //Create client
+            _sock = new ClientWebSocket();
+
+            try
             {
-                notification = n
-            };
+                //Connect
+                _Log("CONNECT", "Connecting to RPC...");
+                await _sock.ConnectAsync(new Uri("ws://localhost:43281/internal/sender"), CancellationToken.None);
+
+                //Send auth data
+                _Log("CONNECT", "Sending auth data...");
+                await _sock.SendAsync(_CreateAuthData(), WebSocketMessageType.Binary, true, CancellationToken.None);
+                _Log("CONNECT", "Auth data sent!");
+
+                //Send queued contents
+                _connected = true;
+                while (_queue.TryDequeue(out byte[] r))
+                {
+                    await _sock.SendAsync(r, WebSocketMessageType.Binary, true, CancellationToken.None);
+                }
+            } catch (Exception ex)
+            {
+                _Log("DISCONNECT", "Hit exception '" + ex.Message + " @ " + ex.StackTrace + "'. Reconnecting...");
+                _OnDisconnect();
+            }
+        }
+
+        private void _Log(string topic, string msg)
+        {
+            Console.WriteLine($"[RPC: {topic}] {msg}");
+        }
+
+        private async Task _SendBytes(byte[] data)
+        {
+            //If connected, send now. Else, queue
+            try
+            {
+                if (_connected)
+                    await _sock.SendAsync(data, WebSocketMessageType.Binary, true, CancellationToken.None);
+                else
+                    _queue.Enqueue(data);
+            } catch (Exception ex)
+            {
+                _Log("DISCONNECT", "Hit exception '" + ex.Message + "'. Reconnecting...");
+                _OnDisconnect();
+            }
+        }
+
+        private async Task _SendMessage(ushort opcode, byte[] data)
+        {
+            //Create buffer to enclose this (+10 bytes)
+            byte[] msg = new byte[data.Length + 10];
+            BinaryTool.WriteUInt16(msg, 0, opcode);
+            BinaryTool.WriteUInt64(msg, 2, _index++);
+            Array.Copy(data, 0, msg, 10, data.Length);
+            await _SendBytes(msg);
+        }
+
+        private async Task _SendRPCMessage(string payload, ushort filterType, byte[] filterBytes)
+        {
+            //Convert payload to bytes
+            byte[] payloadBytes = Encoding.UTF8.GetBytes(payload);
+
+            //Allocate space for this
+            byte[] msg = new byte[4 + payloadBytes.Length + 2 + filterBytes.Length];
+
+            //Write the payload length and data
+            BinaryTool.WriteInt32(msg, 0, payloadBytes.Length);
+            Array.Copy(payloadBytes, 0, msg, 4, payloadBytes.Length);
+
+            //Write the payload type and bytes
+            BinaryTool.WriteUInt16(msg, 4 + payloadBytes.Length, filterType);
+            Array.Copy(filterBytes, 0, msg, 4 + payloadBytes.Length + 2, filterBytes.Length);
+
+            //Write
+            await _SendMessage(1, msg);
+        }
+
+        private byte[] _CreateAuthData()
+        {
+            //Allocate space for the auth data to send
+            byte[] payload = new byte[268];
+            Array.Copy(_GetConnectKey(), 0, payload, 0, 256);
+            payload[257] = 0x52; //r
+            payload[257] = 0x50; //p
+            payload[257] = 0x43; //c
+            payload[257] = 0x20; //[space]
+            payload[257] = 0x50; //p
+            payload[257] = 0x52; //r
+            payload[257] = 0x4F; //o
+            payload[257] = 0x44; //d
+            return payload;
         }
 
         /// <summary>
-        /// Should never be called
+        /// Returns the 256-byte connection key
         /// </summary>
-        /// <param name="opcode"></param>
-        /// <param name="payloads"></param>
         /// <returns></returns>
-        public override async Task HandleMessage(int opcode, Dictionary<string, byte[]> payloads)
+        private byte[] _GetConnectKey()
         {
-            
+            return Convert.FromBase64String(_conn.config.rpc_key);
         }
 
-        /// <summary>
-        /// Sends an RPC message
-        /// </summary>
-        public void SendRPCMessage(RPCOpcode opcode, string target_server_id, RPCPayload payload, RPCFilter filter, RPCType type = RPCType.RPC)
+        public async Task SendRPCMsgToUserID(RPCOpcode opcode, RPCPayload payload, ObjectId user_id)
         {
-            //Create the actual payload message
-            byte[] message = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new RPCMessageContainer
+            //Create payload data
+            RPCMessageContainer msg = new RPCMessageContainer
             {
                 opcode = opcode,
-                target_server = target_server_id,
                 payload = payload,
-                source = conn.system_name
-            }));
-
-            //Encode the filter
-            byte[] filterMsg = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(filter));
-
-            //Queue
-            RawSendMessage((int)type, new Dictionary<string, byte[]>
-            {
-                {"FILTER", filterMsg },
-                {"DATA", message }
-            });
-        }
-
-        /// <summary>
-        /// Sends a message to all users in a tribe
-        /// </summary>
-        /// <param name="opcode">Message opcode</param>
-        /// <param name="payload">Message payload</param>
-        /// <param name="server">Server</param>
-        /// <param name="tribeId">Tribe ID</param>
-        /// <returns></returns>
-        public void SendRPCMessageToTribe(RPCOpcode opcode, RPCPayload payload, DbServer server, int tribeId, RPCType type = RPCType.RPC)
-        {
-            //Create filter to use
-            RPCFilter filter = new RPCFilter
-            {
-                type = "TRIBE",
-                keys = new Dictionary<string, string>
-                {
-                    {"TRIBE_ID", tribeId.ToString() },
-                    {"SERVER_ID", server.id }
-                }
+                source = _conn.system_name,
+                target_server = null
             };
 
+            //Create filter
+            byte[] filter = new byte[12];
+            BinaryTool.WriteMongoID(filter, 0, user_id);
+
             //Send
-            SendRPCMessage(opcode, server.id, payload, filter, type);
+            await _SendRPCMessage(JsonConvert.SerializeObject(msg), 0, filter);
         }
 
-        /// <summary>
-        /// Sends a message to all users on a server
-        /// </summary>
-        /// <param name="opcode">Message opcode</param>
-        /// <param name="payload">Message payload</param>
-        /// <param name="server">Server</param>
-        /// <returns></returns>
-        public void SendRPCMessageToServer(RPCOpcode opcode, RPCPayload payload, ObjectId server, RPCType type = RPCType.RPC)
+        public async Task SendRPCMsgToUserID(RPCOpcode opcode, RPCPayload payload, DbUser user)
         {
-            //Create filter to use
-            RPCFilter filter = new RPCFilter
+            await SendRPCMsgToUserID(opcode, payload, user._id);
+        }
+
+        public async Task SendRPCMsgToServer(RPCOpcode opcode, RPCPayload payload, ObjectId server_id)
+        {
+            //Create payload data
+            RPCMessageContainer msg = new RPCMessageContainer
             {
-                type = "SERVER",
-                keys = new Dictionary<string, string>
-                {
-                    {"SERVER_ID", server.ToString() }
-                }
+                opcode = opcode,
+                payload = payload,
+                source = _conn.system_name,
+                target_server = server_id.ToString()
             };
 
+            //Create filter
+            byte[] filter = new byte[12];
+            BinaryTool.WriteMongoID(filter, 0, server_id);
+
             //Send
-            SendRPCMessage(opcode, server.ToString(), payload, filter, type);
+            await _SendRPCMessage(JsonConvert.SerializeObject(msg), 1, filter);
         }
 
-        /// <summary>
-        /// Sends a message to all users on a server
-        /// </summary>
-        /// <param name="opcode">Message opcode</param>
-        /// <param name="payload">Message payload</param>
-        /// <param name="server">Server</param>
-        /// <returns></returns>
-        public void SendRPCMessageToServer(RPCOpcode opcode, RPCPayload payload, DbServer server, RPCType type = RPCType.RPC)
+        public async Task SendRPCMsgToServer(RPCOpcode opcode, RPCPayload payload, DbServer server)
         {
-            SendRPCMessageToServer(opcode, payload, server._id, type);
+            await SendRPCMsgToUserID(opcode, payload, server._id);
         }
 
-        /// <summary>
-        /// Sends a message to a user
-        /// </summary>
-        /// <param name="opcode">Message opcode</param>
-        /// <param name="payload">Message payload</param>
-        /// <param name="user">User</param>
-        /// <returns></returns>
-        public void SendRPCMessageToUser(RPCOpcode opcode, RPCPayload payload, string user_id, RPCType type = RPCType.RPC)
+        public async Task SendRPCMsgToServerTribe(RPCOpcode opcode, RPCPayload payload, ObjectId server_id, int tribe_id)
         {
-            //Create filter to use
-            RPCFilter filter = new RPCFilter
+            //Create payload data
+            RPCMessageContainer msg = new RPCMessageContainer
             {
-                type = "USER_ID",
-                keys = new Dictionary<string, string>
-                {
-                    {"USER_ID", user_id },
-                }
+                opcode = opcode,
+                payload = payload,
+                source = _conn.system_name,
+                target_server = server_id.ToString()
             };
 
+            //Create filter
+            byte[] filter = new byte[16];
+            BinaryTool.WriteMongoID(filter, 0, server_id);
+            BinaryTool.WriteInt32(filter, 12, tribe_id);
+
             //Send
-            SendRPCMessage(opcode, null, payload, filter, type);
+            await _SendRPCMessage(JsonConvert.SerializeObject(msg), 2, filter);
         }
 
-        /// <summary>
-        /// Sends a message to a user
-        /// </summary>
-        /// <param name="opcode">Message opcode</param>
-        /// <param name="payload">Message payload</param>
-        /// <param name="user">User</param>
-        /// <returns></returns>
-        public void SendRPCMessageToUser(RPCOpcode opcode, RPCPayload payload, ObjectId user_id, RPCType type = RPCType.RPC)
+        public async Task SendRPCMsgToServerTribe(RPCOpcode opcode, RPCPayload payload, DbServer server, int tribe_id)
         {
-            SendRPCMessageToUser(opcode, payload, user_id.ToString(), type);
+            await SendRPCMsgToServerTribe(opcode, payload, server._id, tribe_id);
         }
-
-        /// <summary>
-        /// Sends a message to a user
-        /// </summary>
-        /// <param name="opcode">Message opcode</param>
-        /// <param name="payload">Message payload</param>
-        /// <param name="user">User</param>
-        /// <returns></returns>
-        public void SendRPCMessageToUser(RPCOpcode opcode, RPCPayload payload, DbUser user, RPCType type = RPCType.RPC)
-        {
-            SendRPCMessageToUser(opcode, payload, user.id, type);
-        }
-    }
-
-    public enum RPCType
-    {
-        RPC = 1,
-        Notification = 2
     }
 }

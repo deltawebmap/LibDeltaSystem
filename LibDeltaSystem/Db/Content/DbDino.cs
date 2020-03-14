@@ -178,6 +178,28 @@ namespace LibDeltaSystem.Db.Content
             return dino;
         }
 
+        /// <summary>
+        /// Updates the current dino. Does NOT apply the updates to this instance. Updates last_update_time automatically
+        /// </summary>
+        /// <param name="token"></param>
+        /// <param name="server"></param>
+        /// <returns></returns>
+        public async Task UpdateDino(DeltaConnection conn, DbServer server, UpdateDefinition<DbDino> baseUpdates)
+        {
+            //Apply update
+            var filterBuilder = Builders<DbDino>.Filter;
+            var filter = filterBuilder.Eq("dino_id", dino_id) & filterBuilder.Eq("server_id", server._id);
+            var updateBuilder = Builders<DbDino>.Update;
+            var updates = updateBuilder.Combine(updateBuilder.Set("last_update_time", DateTime.UtcNow), baseUpdates);
+            var response = await conn.content_dinos.FindOneAndUpdateAsync(filter, updates, new FindOneAndUpdateOptions<DbDino, DbDino>
+            {
+                ReturnDocument = ReturnDocument.After
+            });
+
+            //Send RPC update
+            await Tools.RPCMessageTool.SendDbContentUpdateMessage(conn, RPC.Payloads.Entities.RPCSyncType.Dino, response, server._id, tribe_id);
+        }
+
         public int GetBaseLevelUp(ArkDinoStat stat)
         {
             return base_levelups_applied[(int)stat];

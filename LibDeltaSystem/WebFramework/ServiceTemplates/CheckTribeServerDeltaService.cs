@@ -16,7 +16,7 @@ namespace LibDeltaSystem.WebFramework.ServiceTemplates
         /// <summary>
         /// The authorized tribe ID
         /// </summary>
-        public int tribeId;
+        public int? tribeId;
 
         /// <summary>
         /// Authorized tribe data
@@ -37,24 +37,27 @@ namespace LibDeltaSystem.WebFramework.ServiceTemplates
             int? myTribeId = await server.TryGetTribeIdAsync(conn, user.steam_id);
 
             //Check
-            int? checkedTribeId = CheckTribeID(myTribeId);
+            bool allowed = CheckTribeID(myTribeId);
 
             //If the check failed, abort
-            if(!checkedTribeId.HasValue)
+            if(!allowed)
             {
                 await WriteString("Tribe Not Authenticated", "text/plain", 403);
                 return false;
             }
 
             //Get tribe info
-            tribeId = checkedTribeId.Value;
-            tribe = await conn.GetTribeByTribeIdAsync(server.id, checkedTribeId.Value);
-
-            //Make sure we got data
-            if(tribe == null)
+            tribeId = myTribeId;
+            if (myTribeId.HasValue)
             {
-                await WriteString("Could not get tribe info for ID "+tribeId, "text/plain", 404);
-                return false;
+                tribe = await conn.GetTribeByTribeIdAsync(server.id, myTribeId.Value);
+
+                //Make sure we got data
+                if (tribe == null)
+                {
+                    await WriteString("Could not get tribe info for ID " + tribeId, "text/plain", 404);
+                    return false;
+                }
             }
 
             return true;
@@ -65,9 +68,9 @@ namespace LibDeltaSystem.WebFramework.ServiceTemplates
         /// </summary>
         /// <param name="tribeId"></param>
         /// <returns></returns>
-        public virtual int? CheckTribeID(int? tribeId)
+        public virtual bool CheckTribeID(int? tribeId)
         {
-            return tribeId;
+            return tribeId.HasValue;
         }
     }
 }

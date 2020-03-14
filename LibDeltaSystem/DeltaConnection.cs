@@ -38,7 +38,6 @@ namespace LibDeltaSystem
         public IMongoCollection<DbStructure> content_structures;
         public IMongoCollection<DbTribeLogEntry> content_tribe_log;
         public IMongoCollection<DbEgg> content_eggs;
-        public IMongoCollection<DbPlayerCharacter> content_player_characters;
 
         public IMongoCollection<DbUser> system_users;
         public IMongoCollection<DbToken> system_tokens;
@@ -102,7 +101,6 @@ namespace LibDeltaSystem
             content_structures = content_database.GetCollection<DbStructure>("structures");
             content_tribe_log = content_database.GetCollection<DbTribeLogEntry>("tribe_log_entries");
             content_eggs = content_database.GetCollection<DbEgg>("eggs");
-            content_player_characters = content_database.GetCollection<DbPlayerCharacter>("player_characters");
 
             system_database = content_client.GetDatabase("delta-" + config.env + "-system");
             system_users = system_database.GetCollection<DbUser>("users");
@@ -129,6 +127,9 @@ namespace LibDeltaSystem
             arkentries_dinos = charlie_database.GetCollection<DbArkEntry<DinosaurEntry>>("dino_entries");
             arkentries_items = charlie_database.GetCollection<DbArkEntry<ItemEntry>>("item_entries");
             arkentries_maps = charlie_database.GetCollection<DbArkMapEntry>("maps");
+
+            //Create RPC
+            _rpc = new DeltaRPCConnection(this);
         }
 
         public DeltaConnection(DeltaConnectionConfig config, string system_name, int system_version_major, int system_version_minor)
@@ -303,12 +304,6 @@ namespace LibDeltaSystem
         /// <returns></returns>
         public DeltaRPCConnection GetRPC()
         {
-            //Create a new RPC if needed
-            if(_rpc == null)
-            {
-                _rpc = new DeltaRPCConnection(this, Convert.FromBase64String(config.rpc_key), new System.Net.IPEndPoint(System.Net.IPAddress.Parse(config.rpc_ip), config.rpc_port));
-                _rpc.Connect();
-            }
             return _rpc;
         }
         
@@ -926,7 +921,7 @@ namespace LibDeltaSystem
         /// </summary>
         /// <param name="steamId"></param>
         /// <returns></returns>
-        public async Task<DbTribe> GetTribeByTribeIdAsync(string serverId, int tribeId)
+        public async Task<DbTribe> GetTribeByTribeIdAsync(ObjectId serverId, int tribeId)
         {
             var filterBuilder = Builders<DbTribe>.Filter;
             var filter = filterBuilder.Eq("server_id", serverId) & filterBuilder.Eq("tribe_id", tribeId);

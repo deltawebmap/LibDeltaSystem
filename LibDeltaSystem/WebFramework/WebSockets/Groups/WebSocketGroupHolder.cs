@@ -41,7 +41,7 @@ namespace LibDeltaSystem.WebFramework.WebSockets.Groups
         /// </summary>
         /// <param name="query"></param>
         /// <returns></returns>
-        private WebSocketGroup FindGroup(WebSocketGroupQuery query)
+        public WebSocketGroup FindGroup(WebSocketGroupQuery query)
         {
             foreach (var g in groups)
             {
@@ -55,7 +55,7 @@ namespace LibDeltaSystem.WebFramework.WebSockets.Groups
         /// Gets or creates a group for a client
         /// </summary>
         /// <param name="query"></param>
-        private WebSocketGroup GetClientGroup(WebSocketGroupQuery query)
+        public WebSocketGroup GetClientGroup(WebSocketGroupQuery query)
         {
             lock(groups)
             {
@@ -86,13 +86,18 @@ namespace LibDeltaSystem.WebFramework.WebSockets.Groups
 
         public void RemoveClient(GroupWebSocketService client)
         {
-            //Remove the client from the group
-            WebSocketGroup g = client.group;
-            g.RemoveClient(client);
+            while(client.groups.Count > 0)
+            {
+                //Get group
+                var g = client.groups[0];
+                
+                //Remove the client from the group
+                g.RemoveClient(client);
 
-            //If this group is empty, remove it
-            if (g.GetClientCount() == 0)
-                RemoveGroup(g);
+                //If this group is empty, remove it
+                if (g.GetClientCount() == 0)
+                    RemoveGroup(g);
+            }
         }
 
         /// <summary>

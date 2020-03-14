@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using LibDeltaSystem.WebFramework.Entities;
+using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -22,11 +23,14 @@ namespace LibDeltaSystem.WebFramework
         private int checkpoint_index;
         private string checkpoint_name;
 
+        private int _request_id; //Random request ID for logging
+
         public DeltaWebService(DeltaConnection conn, HttpContext e)
         {
             this.e = e;
             this.conn = conn;
             this.method = e.Request.Method.ToUpper();
+            _request_id = new Random().Next();
             start = DateTime.UtcNow;
             checkpoint = start;
             checkpoint_index = 0;
@@ -112,6 +116,19 @@ namespace LibDeltaSystem.WebFramework
             checkpoint_index++;
             checkpoint = DateTime.UtcNow;
             checkpoint_name = name;
+        }
+
+        public void Log(string topic, string msg)
+        {
+            if (conn.debug_mode)
+                Console.WriteLine($"[DeltaWebService@{_request_id}: {topic}] {msg}");
+        }
+
+        public DeltaCommonHTTPMethod GetMethod()
+        {
+            if (Enum.TryParse<DeltaCommonHTTPMethod>(e.Request.Method.ToUpper(), out DeltaCommonHTTPMethod method))
+                return method;
+            return DeltaCommonHTTPMethod.Unknown;
         }
     }
 }

@@ -35,5 +35,25 @@ namespace LibDeltaSystem.Db.Content
         /// Steam icon
         /// </summary>
         public string icon { get; set; }
+        
+        /// <summary>
+        /// The last X of the character - may be null
+        /// </summary>
+        public float? x { get; set; }
+
+        /// <summary>
+        /// The last Y of the character - may be null
+        /// </summary>
+        public float? y { get; set; }
+
+        /// <summary>
+        /// The last Z of the character - may be null
+        /// </summary>
+        public float? z { get; set; }
+
+        /// <summary>
+        /// The last yaw of the character - may be null
+        /// </summary>
+        public float? yaw { get; set; }
     }
 }

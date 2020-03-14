@@ -10,7 +10,7 @@ namespace LibDeltaSystem.WebFramework.WebSockets.Groups
     public abstract class GroupWebSocketService : DeltaWebSocketService
     {
         public WebSocketGroupHolder holder;
-        public WebSocketGroup group;
+        public List<WebSocketGroup> groups;
         
         public GroupWebSocketService(DeltaConnection conn, HttpContext e) : base(conn, e)
         {
@@ -23,7 +23,7 @@ namespace LibDeltaSystem.WebFramework.WebSockets.Groups
         /// <param name="length"></param>
         /// <param name="type"></param>
         /// <returns></returns>
-        public async Task SendMessageToGroup(byte[] data, int length, WebSocketMessageType type)
+        public async Task SendMessageToGroup(WebSocketGroup group, byte[] data, int length, WebSocketMessageType type)
         {
             if (group == null)
                 return;
@@ -43,7 +43,7 @@ namespace LibDeltaSystem.WebFramework.WebSockets.Groups
         /// Authenticates a group query
         /// </summary>
         /// <returns></returns>
-        public abstract Task<WebSocketGroupQuery> AuthenticateGroupQuery();
+        public abstract Task<List<WebSocketGroupQuery>> AuthenticateGroupsQuery();
 
         public override async Task OnSockOpened(WebSocket sock)
         {
@@ -51,19 +51,18 @@ namespace LibDeltaSystem.WebFramework.WebSockets.Groups
             holder = GetGroupHolder();
 
             //Now, authenticate our query
-            WebSocketGroupQuery query = await AuthenticateGroupQuery();
+            List<WebSocketGroupQuery> queries = await AuthenticateGroupsQuery();
 
-            //Locate a group for us to use
-            group = holder.AddClient(this, query);
+            //Locate groups for us to use
+            groups = new List<WebSocketGroup>();
+            foreach (var q in queries)
+                holder.AddClient(this, q);
         }
 
         public override async Task OnSockClosed(WebSocket sock)
         {
-            //Remove ourselves from this group
-            if(group != null)
-            {
-                holder.RemoveClient(this);
-            }
+            //Remove ourselves from all groups
+            holder.RemoveClient(this);
         }
     }
 }

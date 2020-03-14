@@ -24,6 +24,12 @@ namespace LibDeltaSystem.WebFramework
             this.start = DateTime.UtcNow;
         }
 
+        public void Log(string topic, string msg)
+        {
+            if (conn.debug_mode)
+                Console.WriteLine($"[DeltaWebServer: {topic}] {msg}");
+        }
+
         public Task RunAsync()
         {
             var host = new WebHostBuilder()
@@ -64,6 +70,9 @@ namespace LibDeltaSystem.WebFramework
                 return;
             }
 
+            //Log
+            Log("REQUEST", e.Request.Method.ToUpper() + " TO " + e.Request.Path);
+
             //Check if this is a status request
             if(e.Request.Path == "/status.json")
             {
@@ -102,6 +111,7 @@ namespace LibDeltaSystem.WebFramework
             } catch (Exception ex)
             {
                 //TODO: Log this
+                await WriteStringToBody(e, "Internal Server Error - Try again later", "text/plain", 500);
                 Console.WriteLine($"SERVER ERROR {ex.Message} @ {ex.StackTrace}");
             }
         }

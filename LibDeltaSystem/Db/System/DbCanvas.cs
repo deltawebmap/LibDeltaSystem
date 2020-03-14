@@ -12,7 +12,12 @@ namespace LibDeltaSystem.Db.System
         /// <summary>
         /// Server ID associated with this
         /// </summary>
-        public string server_id { get; set; }
+        public ObjectId server_id { get; set; }
+
+        /// <summary>
+        /// The tribe this belongs to
+        /// </summary>
+        public int tribe_id { get; set; }
 
         /// <summary>
         /// User IDs

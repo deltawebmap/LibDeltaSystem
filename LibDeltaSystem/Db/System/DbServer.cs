@@ -111,21 +111,6 @@ namespace LibDeltaSystem.Db.System
         public int last_client_version { get; set; }
 
         /// <summary>
-        /// Gets a player character by it's ARK ID
-        /// </summary>
-        /// <param name="conn"></param>
-        /// <param name="tribeId"></param>
-        /// <param name="arkId"></param>
-        /// <returns></returns>
-        public async Task<DbPlayerCharacter> GetPlayerCharacterById(DeltaConnection conn, int? tribeId, uint arkId)
-        {
-            var filterBuilder = Builders<DbPlayerCharacter>.Filter;
-            var filter = filterBuilder.Eq("ark_id", arkId) & Tools.FilterBuilderToolDb.CreateTribeFilter<DbPlayerCharacter>(this, tribeId);
-            var result = await conn.content_player_characters.FindAsync(filter);
-            return await result.FirstOrDefaultAsync();
-        }
-
-        /// <summary>
         /// Returns the player profile by ID
         /// </summary>
         /// <param name="steamId"></param>
@@ -221,36 +206,21 @@ namespace LibDeltaSystem.Db.System
         }
 
         /// <summary>
-        /// Updates this in the database
-        /// </summary>
-        public void Update(DeltaConnection conn)
-        {
-            UpdateAsync(conn).GetAwaiter().GetResult();
-        }
-
-        /// <summary>
         /// Gets all canvases
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        public async Task<List<DbCanvas>> GetServerCanvases(DeltaConnection conn)
+        public async Task<List<DbCanvas>> GetServerCanvases(DeltaConnection conn, int? tribe_id)
         {
             var filterBuilder = Builders<DbCanvas>.Filter;
-            var filter = filterBuilder.Eq("server_id", id);
+            FilterDefinition<DbCanvas> filter;
+            if(!tribe_id.HasValue)
+                filter = filterBuilder.Eq("server_id", _id);
+            else
+                filter = filterBuilder.Eq("server_id", _id) & filterBuilder.Eq("tribe_id", tribe_id.Value);
             var result = await conn.system_canvases.FindAsync(filter);
             List<DbCanvas> can = await result.ToListAsync();
             return can;
-        }
-
-        /// <summary>
-        /// Updates this in the database async
-        /// </summary>
-        /// <returns></returns>
-        public async Task UpdateAsync(DeltaConnection conn)
-        {
-            var filterBuilder = Builders<DbServer>.Filter;
-            var filter = filterBuilder.Eq("_id", _id);
-            await conn.system_servers.FindOneAndReplaceAsync(filter, this);
         }
 
         /// <summary>
@@ -415,7 +385,7 @@ namespace LibDeltaSystem.Db.System
 
         public bool IsUserAdmin(DbUser user)
         {
-            return owner_uid == user.id;
+            return CheckIsUserAdmin(user);
         }
 
         /// <summary>
@@ -444,6 +414,25 @@ namespace LibDeltaSystem.Db.System
                     }
                 };
             }
+        }
+
+        /// <summary>
+        /// Updates the server and automatically sends RPC events
+        /// </summary>
+        /// <param name="update"></param>
+        /// <returns></returns>
+        public async Task UpdateAsync(DeltaConnection conn, UpdateDefinition<DbServer> update)
+        {
+            //Send update
+            var filterBuilder = Builders<DbServer>.Filter;
+            var filter = filterBuilder.Eq("_id", _id);
+            var result = await conn.system_servers.FindOneAndUpdateAsync(filter, update, new FindOneAndUpdateOptions<DbServer, DbServer>
+            {
+                ReturnDocument = ReturnDocument.After
+            });
+
+            //Send RPC events
+            await Tools.RPCMessageTool.SendGuildUpdate(conn, result);
         }
     }
 

@@ -131,5 +131,10 @@ namespace LibDeltaSystem.WebFramework.WebSockets
         {
             await sock.SendAsync(new ArraySegment<byte>(buffer, 0, length), type, true, CancellationToken.None);
         }
+
+        public async Task DisconnectAsync(WebSocketCloseStatus status, string reason)
+        {
+            await sock.CloseAsync(status, reason, CancellationToken.None);
+        }
     }
 }

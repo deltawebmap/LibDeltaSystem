@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LibDeltaSystem.WebFramework.WebSockets.Entities;
+using System;
 using System.Collections.Generic;
 using System.Net.WebSockets;
 using System.Text;
@@ -9,7 +10,7 @@ namespace LibDeltaSystem.WebFramework.WebSockets.Groups
     public class WebSocketGroup
     {
         public readonly WebSocketGroupQuery identifier;
-        private readonly List<GroupWebSocketService> clients;
+        public readonly List<GroupWebSocketService> clients;
 
         public WebSocketGroup(WebSocketGroupQuery identifier)
         {
@@ -31,19 +32,30 @@ namespace LibDeltaSystem.WebFramework.WebSockets.Groups
         {
             lock (clients)
                 clients.Add(client);
-            client.group = this;
+            if(!client.groups.Contains(this))
+                client.groups.Add(this);
         }
 
         public void RemoveClient(GroupWebSocketService client)
         {
             lock (clients)
                 clients.Remove(client);
-            client.group = null;
+            if (client.groups.Contains(this))
+                client.groups.Remove(this);
         }
 
         public int GetClientCount()
         {
             return clients.Count;
+        }
+
+        /// <summary>
+        /// Sends a message to all clients
+        /// </summary>
+        /// <returns></returns>
+        public async Task SendDistributedMessage(PackedWebSocketMessage packed, List<GroupWebSocketService> ignoredClients)
+        {
+            await SendDistributedMessage(packed.data, packed.length, packed.type, ignoredClients);
         }
 
         /// <summary>
