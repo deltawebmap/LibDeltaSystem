@@ -50,7 +50,7 @@ namespace LibDeltaSystem.WebFramework.ServiceTemplates
             tribeId = myTribeId;
             if (myTribeId.HasValue)
             {
-                tribe = await conn.GetTribeByTribeIdAsync(server.id, myTribeId.Value);
+                tribe = await conn.GetTribeByTribeIdAsync(server._id, myTribeId.Value);
 
                 //Make sure we got data
                 if (tribe == null)

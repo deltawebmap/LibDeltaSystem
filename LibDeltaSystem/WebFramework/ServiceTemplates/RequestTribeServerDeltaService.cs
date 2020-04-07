@@ -64,7 +64,7 @@ namespace LibDeltaSystem.WebFramework.ServiceTemplates
             {
                 //Get tribe info
                 EndDebugCheckpoint("Get tribe info");
-                tribe = await conn.GetTribeByTribeIdAsync(server.id, myTribeId.Value);
+                tribe = await conn.GetTribeByTribeIdAsync(server._id, myTribeId.Value);
 
                 //Make sure we got data
                 if (tribe == null)

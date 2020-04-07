@@ -265,7 +265,7 @@ namespace LibDeltaSystem.Db.System
         /// <returns></returns>
         public async Task<DbTribe> GetTribeAsync(DeltaConnection conn, int tribeId)
         {
-            return await conn.GetTribeByTribeIdAsync(id, tribeId);
+            return await conn.GetTribeByTribeIdAsync(_id, tribeId);
         }
 
         /// <summary>

@@ -32,6 +32,7 @@ namespace LibDeltaSystem
         private IMongoDatabase charlie_database;
 
         public IMongoCollection<DbDino> content_dinos;
+        public IMongoCollection<DbInventory> content_inventories;
         public IMongoCollection<DbItem> content_items;
         public IMongoCollection<DbTribe> content_tribes;
         public IMongoCollection<DbPlayerProfile> content_player_profiles;
@@ -95,6 +96,7 @@ namespace LibDeltaSystem
 
             content_database = content_client.GetDatabase("delta-"+config.env+"-content");
             content_dinos = content_database.GetCollection<DbDino>("dinos");
+            content_inventories = content_database.GetCollection<DbInventory>("inventories");
             content_items = content_database.GetCollection<DbItem>("items");
             content_tribes = content_database.GetCollection<DbTribe>("tribes");
             content_player_profiles = content_database.GetCollection<DbPlayerProfile>("player_profiles");

@@ -10,5 +10,19 @@ namespace LibDeltaSystem.Entities.DynamicTiles
         public string img;
         public float size;
         public string item; //Classname of the item used to place this
+        public StructureMetadata_Size image_size;
+        public StructureMetadata_Point[] outline;
+    }
+
+    public class StructureMetadata_Size
+    {
+        public int width;
+        public int height;
+    }
+
+    public class StructureMetadata_Point
+    {
+        public int x;
+        public int y;
     }
 }

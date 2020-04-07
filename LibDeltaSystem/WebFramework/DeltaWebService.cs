@@ -1,4 +1,5 @@
-﻿using LibDeltaSystem.WebFramework.Entities;
+﻿using LibDeltaSystem.Entities.MiscNet;
+using LibDeltaSystem.WebFramework.Entities;
 using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
 using System;
@@ -87,6 +88,19 @@ namespace LibDeltaSystem.WebFramework
 
             //Write
             await WriteString(s, "application/json", code);
+        }
+
+        /// <summary>
+        /// Writes a basic JSON object with the OK status
+        /// </summary>
+        /// <param name="ok"></param>
+        /// <returns></returns>
+        public async Task WriteStatus(bool ok)
+        {
+            await WriteJSON(new OkStatusResponse
+            {
+                ok = ok
+            });
         }
         
         /// <summary>
