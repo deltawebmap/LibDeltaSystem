@@ -25,6 +25,8 @@ namespace LibDeltaSystem
     {
         public const int LIB_VERSION_MAJOR = 0;
         public const int LIB_VERSION_MINOR = 1;
+
+        public const string SYSTEM_USER_TEST = "$SYSTEM.DEBUG_BUILD_USER";
         
         private MongoClient content_client;
         private IMongoDatabase content_database;
@@ -59,6 +61,7 @@ namespace LibDeltaSystem
         public IMongoCollection<DbCluster> system_clusters;
         public IMongoCollection<DbModTimeAnalyticsObject> system_analytics_time;
         public IMongoCollection<DbAlertBanner> system_alert_banners;
+        public IMongoCollection<DbQueuedSyncRequest> system_queued_sync_commands;
 
         public IMongoCollection<DbArkEntry<DinosaurEntry>> arkentries_dinos;
         public IMongoCollection<DbArkEntry<ItemEntry>> arkentries_items;
@@ -87,7 +90,7 @@ namespace LibDeltaSystem
         /// Connects and sets up databases
         /// </summary>
         /// <returns></returns>
-        public async Task Connect()
+        public async Task Connect(bool enable_rpc = true)
         {
             //Set up database
             content_client = new MongoClient(
@@ -124,6 +127,7 @@ namespace LibDeltaSystem
             system_clusters = system_database.GetCollection<DbCluster>("clusters");
             system_analytics_time = system_database.GetCollection<DbModTimeAnalyticsObject>("analytics_time");
             system_alert_banners = system_database.GetCollection<DbAlertBanner>("alert_banners");
+            system_queued_sync_commands = system_database.GetCollection<DbQueuedSyncRequest>("queued_sync_commands");
 
             charlie_database = content_client.GetDatabase("delta-" + config.env + "-charlie");
             arkentries_dinos = charlie_database.GetCollection<DbArkEntry<DinosaurEntry>>("dino_entries");
@@ -131,7 +135,8 @@ namespace LibDeltaSystem
             arkentries_maps = charlie_database.GetCollection<DbArkMapEntry>("maps");
 
             //Create RPC
-            _rpc = new DeltaRPCConnection(this);
+            if(enable_rpc)
+                _rpc = new DeltaRPCConnection(this);
         }
 
         public DeltaConnection(DeltaConnectionConfig config, string system_name, int system_version_major, int system_version_minor)
@@ -243,6 +248,15 @@ namespace LibDeltaSystem
             var results = await collec.FindAsync(filter);
             var r = await results.FirstOrDefaultAsync();
             return r;
+        }
+
+        private static async Task<bool> DeleteDocumentById<T>(IMongoCollection<T> collec, ObjectId id)
+        {
+            //Find
+            var filterBuilder = Builders<T>.Filter;
+            var filter = filterBuilder.Eq("_id", id);
+            var results = await collec.DeleteOneAsync(filter);
+            return results.DeletedCount == 1;
         }
 
         public static async Task<bool> UpdateDocumentById<T>(IMongoCollection<T> collec, ObjectId id, UpdateDefinition<T> update)
@@ -536,6 +550,8 @@ namespace LibDeltaSystem
             return response;
         }
 
+        private Dictionary<string, DbSteamCache> memory_steam_cache = new Dictionary<string, DbSteamCache>();
+
         /// <summary>
         /// Gets or downloads the Steam profile. The only time this will ever return null is if Steam can't find the user.
         /// </summary>
@@ -543,7 +559,11 @@ namespace LibDeltaSystem
         /// <returns></returns>
         public async Task<DbSteamCache> GetSteamProfileById(string id)
         {
-            //First, check if we have any (up to date) steam profiles
+            //Check if we have any in memory
+            if (memory_steam_cache.ContainsKey(id))
+                return memory_steam_cache[id];
+
+            //Check if we have any (up to date) steam profiles in the database
             DbSteamCache profile = null;
             {
                 //Get the latest date we can use
@@ -599,6 +619,10 @@ namespace LibDeltaSystem
                 });
                 profile._id = response._id;
             }
+
+            //Add to memory cache
+            if (!memory_steam_cache.ContainsKey(id))
+                memory_steam_cache.Add(id, profile);
 
             return profile;
         }
@@ -689,6 +713,30 @@ namespace LibDeltaSystem
                 return null;
 
             return u;
+        }
+        
+        /// <summary>
+        /// Returns all pending sync requests
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        public async Task<List<DbQueuedSyncRequest>> GetQueuedSyncCommandsForServerById(ObjectId id, bool clear, int limit)
+        {
+            var filterBuilder = Builders<DbQueuedSyncRequest>.Filter;
+            var filter = filterBuilder.Eq("server_id", id);
+            var results = await system_queued_sync_commands.FindAsync(filter, new FindOptions<DbQueuedSyncRequest, DbQueuedSyncRequest>
+            {
+                Limit = limit
+            });
+            var resultList = await results.ToListAsync();
+            if(clear)
+            {
+                foreach(var r in resultList)
+                {
+                    await DeleteDocumentById(system_queued_sync_commands, r._id);
+                }
+            }
+            return resultList;
         }
 
         /// <summary>
@@ -898,6 +946,23 @@ namespace LibDeltaSystem
             var filterBuilder = Builders<DbServer>.Filter;
             var filter = filterBuilder.Eq("token", token);
             var results = await system_servers.FindAsync(filter);
+            var s = await results.FirstOrDefaultAsync();
+            if (s == null)
+                return null;
+            return s;
+        }
+
+        /// <summary>
+        /// Authenticates a server with it's token
+        /// </summary>
+        /// <param name="token"></param>
+        /// <returns></returns>
+        public async Task<DbSyncSavedState> AuthenticateServerSessionTokenAsync(string token)
+        {
+            //Find the machine in the database
+            var filterBuilder = Builders<DbSyncSavedState>.Filter;
+            var filter = filterBuilder.Eq("token", token);
+            var results = await system_sync_states.FindAsync(filter);
             var s = await results.FirstOrDefaultAsync();
             if (s == null)
                 return null;

@@ -18,5 +18,10 @@ namespace LibDeltaSystem.Db.Content
         /// Owner of the tribe
         /// </summary>
         public uint tribe_owner { get; set; }
+
+        /// <summary>
+        /// Last time this tribe was seen online
+        /// </summary>
+        public DateTime last_seen { get; set; }
     }
 }

@@ -23,7 +23,7 @@ namespace LibDeltaSystem.Db.Content
 
         public DateTime created_time { get; set; }
 
-        public DateTime lsat_update_time { get; set; }
+        public DateTime last_update_time { get; set; }
 
         public enum DbInventory_InventoryType
         {

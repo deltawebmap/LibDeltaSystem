@@ -121,5 +121,12 @@ namespace LibDeltaSystem.Db.Content
             List<DbEgg> c = await result.ToListAsync();
             return c;
         }
+        
+        public static async Task<List<DbEgg>> GetEggs(DeltaConnection delta, FilterDefinition<DbEgg> filter)
+        {
+            var result = await delta.content_eggs.FindAsync(filter);
+            List<DbEgg> c = await result.ToListAsync();
+            return c;
+        }
     }
 }

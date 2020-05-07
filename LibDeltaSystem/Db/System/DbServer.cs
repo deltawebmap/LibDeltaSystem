@@ -1,6 +1,7 @@
 ﻿using LibDeltaSystem.Db.Content;
 using LibDeltaSystem.Db.System.Entities;
 using LibDeltaSystem.Entities.ArkEntries;
+using LibDeltaSystem.Tools;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using System;
@@ -36,7 +37,7 @@ namespace LibDeltaSystem.Db.System
         /// <summary>
         /// ID of the owner of the server
         /// </summary>
-        public string owner_uid { get; set; }
+        public ObjectId? owner_uid { get; set; }
 
         /// <summary>
         /// Creds checked to verify the connection between the slave server.
@@ -246,6 +247,32 @@ namespace LibDeltaSystem.Db.System
         }
 
         /// <summary>
+        /// Returns the player profile for a user, if any
+        /// </summary>
+        /// <param name="steamId"></param>
+        /// <returns></returns>
+        public async Task<DbPlayerProfile> GetUserPlayerProfile(DeltaConnection conn, DbUser user)
+        {
+            var filterBuilder = Builders<DbPlayerProfile>.Filter;
+            var filter = filterBuilder.Eq("server_id", _id) & filterBuilder.Eq("steam_id", user.steam_id);
+            var results = await conn.content_player_profiles.FindAsync(filter);
+            return await results.FirstOrDefaultAsync();
+        }
+
+        /// <summary>
+        /// Returns the player profile for a user, if any
+        /// </summary>
+        /// <param name="steamId"></param>
+        /// <returns></returns>
+        public async Task<bool> DeleteUserPlayerProfile(DeltaConnection conn, DbUser user)
+        {
+            var filterBuilder = Builders<DbPlayerProfile>.Filter;
+            var filter = filterBuilder.Eq("server_id", _id) & filterBuilder.Eq("steam_id", user.steam_id);
+            var results = await conn.content_player_profiles.DeleteOneAsync(filter);
+            return results.DeletedCount == 1;
+        }
+
+        /// <summary>
         /// Returns 
         /// </summary>
         /// <param name="steamId"></param>
@@ -266,6 +293,15 @@ namespace LibDeltaSystem.Db.System
         public async Task<DbTribe> GetTribeAsync(DeltaConnection conn, int tribeId)
         {
             return await conn.GetTribeByTribeIdAsync(_id, tribeId);
+        }
+
+        public async Task<List<DbTribe>> GetAllTribesAsync(DeltaConnection conn)
+        {
+            var filterBuilder = Builders<DbTribe>.Filter;
+            var filter = filterBuilder.Eq("server_id", this._id);
+            var results = await conn.content_tribes.FindAsync(filter);
+            var r = await results.ToListAsync();
+            return r;
         }
 
         /// <summary>
@@ -433,6 +469,23 @@ namespace LibDeltaSystem.Db.System
 
             //Send RPC events
             await Tools.RPCMessageTool.SendGuildUpdate(conn, result);
+        }
+
+        /// <summary>
+        /// Sets the owner of this server to a user ID
+        /// </summary>
+        /// <param name="conn"></param>
+        /// <param name="owner"></param>
+        /// <returns></returns>
+        public async Task ClaimServer(DeltaConnection conn, DbUser owner)
+        {
+            //Update
+            owner_uid = owner._id;
+            var builder = Builders<DbServer>.Update;
+            await ExplicitUpdateAsync(conn, builder.Set("owner_uid", owner._id));
+
+            //Notify the user that a new server is now owned by them
+            await RPCMessageTool.SendUserServerClaimed(conn, owner, this);
         }
     }
 

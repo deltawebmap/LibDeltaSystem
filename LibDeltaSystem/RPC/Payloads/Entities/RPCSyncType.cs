@@ -8,6 +8,7 @@ namespace LibDeltaSystem.RPC.Payloads.Entities
     {
         Dino = 0,
         Player = 1,
-        Inventory = 2
+        Inventory = 2,
+        Structure = 3
     }
 }

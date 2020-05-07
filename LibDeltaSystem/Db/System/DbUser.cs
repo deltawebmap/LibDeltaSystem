@@ -117,15 +117,6 @@ namespace LibDeltaSystem.Db.System
         }
 
         /// <summary>
-        /// Returns servers this member is part of. Does not include servers that they own but do not play on.
-        /// </summary>
-        /// <returns></returns>
-        public List<Tuple<DbServer, DbPlayerProfile>> GetGameServers(DeltaConnection conn)
-        {
-            return GetGameServersAsync(conn).GetAwaiter().GetResult();
-        }
-
-        /// <summary>
         /// Checks if this user is a premium, subscribed, member
         /// </summary>
         /// <returns></returns>
@@ -167,17 +158,13 @@ namespace LibDeltaSystem.Db.System
             return servers;
         }
 
-        /// <summary>
-        /// Returns servers that this user owns, but might not actually play on.
-        /// </summary>
-        /// <returns></returns>
-        public async Task<List<DbServer>> GetOwnedServersAsync(DeltaConnection conn)
+        public async Task<List<DbServer>> GetAdminedServersAsync(DeltaConnection conn)
         {
-            //Search for servers we own
+            //Search for servers
             var filterBuilder = Builders<DbServer>.Filter;
-            var filter = filterBuilder.Eq("owner_uid", id);
-            var results = await conn.system_servers.FindAsync(filter);
-            return await results.ToListAsync();
+            var filter = filterBuilder.Eq("owner_uid", this._id) | filterBuilder.In("admins", new ObjectId[]{this._id});
+            var result = await conn.system_servers.FindAsync(filter);
+            return await result.ToListAsync();
         }
 
         /// <summary>

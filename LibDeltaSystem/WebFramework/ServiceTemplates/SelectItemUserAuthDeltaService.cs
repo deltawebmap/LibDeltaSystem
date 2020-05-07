@@ -36,7 +36,7 @@ namespace LibDeltaSystem.WebFramework.ServiceTemplates
         public override async Task<bool> SetArgs(Dictionary<string, string> args)
         {
             //Check if an item was specified
-            if(args.ContainsKey(SELECT_ITEM_ARG))
+            if(!args.ContainsKey(SELECT_ITEM_ARG))
             {
                 itemSpecified = false;
             } else

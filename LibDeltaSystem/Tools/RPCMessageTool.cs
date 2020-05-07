@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using LibDeltaSystem.RPC.Payloads.Entities;
 using LibDeltaSystem.Db.System;
 using LibDeltaSystem.Entities.CommonNet;
+using LibDeltaSystem.RPC.Payloads.User;
 
 namespace LibDeltaSystem.Tools
 {
@@ -93,6 +94,21 @@ namespace LibDeltaSystem.Tools
 
             //Send
             await rpc.SendRPCMsgToServer(RPC.RPCOpcode.RPCSystem10002GuildUpdate, payload, guild._id);
+        }
+
+        public static async Task SendUserServerClaimed(DeltaConnection conn, DbUser claimer, DbServer guild)
+        {
+            //Create payload
+            RPCPayload30001UserServerClaimed payload = new RPCPayload30001UserServerClaimed
+            {
+                guild = await NetGuildUser.GetNetGuild(conn, guild, claimer)
+            };
+
+            //Get RPC
+            var rpc = conn.GetRPC();
+
+            //Send
+            await rpc.SendRPCMsgToUserID(RPC.RPCOpcode.RPCPayload30001UserServerClaimed, payload, claimer);
         }
     }
 }

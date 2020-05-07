@@ -29,7 +29,7 @@ namespace LibDeltaSystem.Db.Content
         /// <summary>
         /// Last time this person logged into the game
         /// </summary>
-        public double last_login { get; set; }
+        public DateTime last_seen { get; set; }
 
         /// <summary>
         /// Steam icon
@@ -55,5 +55,10 @@ namespace LibDeltaSystem.Db.Content
         /// The last yaw of the character - may be null
         /// </summary>
         public float? yaw { get; set; }
+
+        public float? health { get; set; }
+        public float? stamina { get; set; }
+        public float? weight { get; set; }
+        public float? food { get; set; }
     }
 }

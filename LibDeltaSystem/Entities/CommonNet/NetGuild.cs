@@ -34,14 +34,10 @@ namespace LibDeltaSystem.Entities.CommonNet
                     close = i;
             }
 
-            //Check pseudo flags
-            if (mapData == null)
-                close = 32; //MAP_NOT_SUPPORTED
-
             //Set
             display_name = server.display_name;
             image_url = server.image_url;
-            owner_uid = server.owner_uid;
+            owner_uid = server.owner_uid?.ToString();
             cluster_id = server.cluster_id;
             id = server.id;
             map_id = server.latest_server_map;

@@ -20,31 +20,51 @@ namespace LibDeltaSystem.Entities.CommonNet
 
         public async Task SetServerGuildData(DeltaConnection conn, DbServer server, DbUser user, DbPlayerProfile profile)
         {
-            //Get tribe info
-            var tribe = await conn.GetTribeByTribeIdAsync(server._id, profile.tribe_id);
-
-            //Get my location
-            DbVector3 myPos = null;
-            if (profile.x != null && profile.y != null && profile.z != null)
-                myPos = new DbVector3
+            //Set profile information
+            if(profile != null)
+            {
+                //Get tribe info
+                var tribe = await conn.GetTribeByTribeIdAsync(server._id, profile.tribe_id);
+                has_tribe = tribe != null;
+                if(tribe != null)
                 {
-                    x = profile.x.Value,
-                    y = profile.y.Value,
-                    z = profile.z.Value
-                };
+                    target_tribe = tribe;
+                }
 
-            //Set
-            user_prefs = await server.GetUserPrefs(conn, user.id);
-            my_location = myPos;
-            ark_id = profile.ark_id.ToString();
-            target_tribe = tribe;
+                //Get my location
+                DbVector3 myPos = null;
+                if (profile.x != null && profile.y != null && profile.z != null)
+                    myPos = new DbVector3
+                    {
+                        x = profile.x.Value,
+                        y = profile.y.Value,
+                        z = profile.z.Value
+                    };
+
+                //Set
+                my_location = myPos;
+                ark_id = profile.ark_id.ToString();
+            } else
+            {
+                has_tribe = false;
+            }
+            
             is_admin = server.CheckIsUserAdmin(user);
-            has_tribe = server != null;
+            user_prefs = await server.GetUserPrefs(conn, user.id);
         }
 
         public static async Task<NetGuildUser> GetNetGuild(DeltaConnection conn, DbServer server, DbUser user, DbPlayerProfile profile)
         {
             NetGuildUser g = new NetGuildUser();
+            await g.SetServerData(conn, server);
+            await g.SetServerGuildData(conn, server, user, profile);
+            return g;
+        }
+
+        public static async Task<NetGuildUser> GetNetGuild(DeltaConnection conn, DbServer server, DbUser user)
+        {
+            NetGuildUser g = new NetGuildUser();
+            var profile = await server.GetUserPlayerProfile(conn, user);
             await g.SetServerData(conn, server);
             await g.SetServerGuildData(conn, server, user, profile);
             return g;
