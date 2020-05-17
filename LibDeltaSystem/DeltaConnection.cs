@@ -62,6 +62,7 @@ namespace LibDeltaSystem
         public IMongoCollection<DbModTimeAnalyticsObject> system_analytics_time;
         public IMongoCollection<DbAlertBanner> system_alert_banners;
         public IMongoCollection<DbQueuedSyncRequest> system_queued_sync_commands;
+        public IMongoCollection<DbBetaKey> system_beta_keys;
 
         public IMongoCollection<DbArkEntry<DinosaurEntry>> arkentries_dinos;
         public IMongoCollection<DbArkEntry<ItemEntry>> arkentries_items;
@@ -128,6 +129,7 @@ namespace LibDeltaSystem
             system_analytics_time = system_database.GetCollection<DbModTimeAnalyticsObject>("analytics_time");
             system_alert_banners = system_database.GetCollection<DbAlertBanner>("alert_banners");
             system_queued_sync_commands = system_database.GetCollection<DbQueuedSyncRequest>("queued_sync_commands");
+            system_beta_keys = system_database.GetCollection<DbBetaKey>("beta_keys");
 
             charlie_database = content_client.GetDatabase("delta-" + config.env + "-charlie");
             arkentries_dinos = charlie_database.GetCollection<DbArkEntry<DinosaurEntry>>("dino_entries");
@@ -1045,6 +1047,37 @@ namespace LibDeltaSystem
         {
             var results = await system_dynamic_tile_cache.FindAsync(target.CreateFilter());
             return await results.FirstOrDefaultAsync();
+        }
+
+        /// <summary>
+        /// Validates if a key can be claimed. If claimer is set, it will be claimed by that user ID
+        /// </summary>
+        /// <param name="claimer"></param>
+        /// <returns></returns>
+        public async Task<bool> ValidateAndClaimBetaKey(string key, ObjectId? claimer = null)
+        {
+            //Search for key
+            var filterBuilder = Builders<DbBetaKey>.Filter;
+            var filter = filterBuilder.Eq("key", key);
+            var result = await (await system_beta_keys.FindAsync(filter)).FirstOrDefaultAsync();
+            if (result == null)
+                return false;
+            if(claimer == null)
+            {
+                //No claimer set. We don't know if this belongs to us, so return true
+                return true;
+            } else
+            {
+                //A claimer is set. Make sure that this is either unclaimed or claimed by the same user
+                if (claimer.Value == result.claimed_by || !result.claimed)
+                {
+                    //Success. Claim
+                    var update = Builders<DbBetaKey>.Update.Set("claimed", true).Set("claimed_by", claimer.Value);
+                    await system_beta_keys.UpdateOneAsync(filter, update);
+                    return true;
+                }
+                return false;
+            }
         }
     }
 }

@@ -48,6 +48,11 @@ namespace LibDeltaSystem.Db.System
         public string next { get; set; }
 
         /// <summary>
+        /// Additional custom data that can be set
+        /// </summary>
+        public Dictionary<string, string> custom_data { get; set; }
+
+        /// <summary>
         /// Authenticates this preflight by generating a token
         /// </summary>
         /// <returns></returns>
