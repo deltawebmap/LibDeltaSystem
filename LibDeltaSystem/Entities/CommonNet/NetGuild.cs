@@ -15,8 +15,8 @@ namespace LibDeltaSystem.Entities.CommonNet
         public string id;
         public string map_id;
 
-        public bool[] permissions;
-        public int closed_reason; //https://docs.google.com/spreadsheets/d/1zQ_r86uyDAvwAtEg0135rL6g2lHqhPtYAgFdJrL3vZc/edit
+        public bool secure_mode;
+        public DateTime last_secure_mode_toggled;
 
         public async Task SetServerData(DeltaConnection conn, DbServer server)
         {
@@ -41,8 +41,8 @@ namespace LibDeltaSystem.Entities.CommonNet
             cluster_id = server.cluster_id;
             id = server.id;
             map_id = server.latest_server_map;
-            permissions = server.GetPermissionFlagList();
-            closed_reason = close;
+            secure_mode = server.secure_mode;
+            last_secure_mode_toggled = server.last_secure_mode_toggled;
         }
 
         public static async Task<NetGuildUser> GetGuild(DeltaConnection conn, DbServer server)

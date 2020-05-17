@@ -198,7 +198,7 @@ namespace LibDeltaSystem.Db.System
         /// Generates a random token
         /// </summary>
         /// <returns></returns>
-        public async Task<DbToken> MakeOAuthToken(DeltaConnection conn, DbOauthApp app, string[] scopes)
+        public async Task<DbToken> MakeOAuthToken(DeltaConnection conn, DbOauthApp app, ulong scopes)
         {
             //Generate a unique string
             string token = Tools.SecureStringTool.GenerateSecureString(64);
@@ -217,10 +217,10 @@ namespace LibDeltaSystem.Db.System
                 token = token,
                 user_id = id,
                 _id = MongoDB.Bson.ObjectId.GenerateNewId(),
-                is_oauth = true,
+                token_type = DbToken_TokenType.UserOauth,
                 oauth_client_id = app.client_id,
                 oauth_preflight = preflight,
-                oauth_scopes = scopes
+                token_scope = scopes
             };
 
             //Insert

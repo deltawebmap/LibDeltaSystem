@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LibDeltaSystem.Tools.DeltaWebFormat.Attributes;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -7,6 +8,7 @@ namespace LibDeltaSystem.Entities.ArkEntries.Dinosaur
     public class DinosaurEntry
     {
         public string screen_name { get; set; }
+        public ushort hash { get; set; }
         public float colorizationIntensity { get; set; }
         public float babyGestationSpeed { get; set; }
         public float extraBabyGestationSpeedMultiplier { get; set; }
@@ -15,13 +17,17 @@ namespace LibDeltaSystem.Entities.ArkEntries.Dinosaur
         public bool useBabyGestation { get; set; }
         public float extraBabyAgeMultiplier { get; set; }
 
+        [WebFormatAttributeUseObject]
         public DinosaurEntryStatusComponent statusComponent { get; set; }
 
-        public List<DinosaurEntryFood> adultFoods { get; set; }
-        public List<DinosaurEntryFood> childFoods { get; set; }
+        [WebFormatAttributeUseObject]
+        public DinosaurEntryFood[] adultFoods { get; set; }
+        [WebFormatAttributeUseObject]
+        public DinosaurEntryFood[] childFoods { get; set; }
 
         public string classname { get; set; }
 
+        [WebFormatAttributeUseObject]
         public DeltaAsset icon { get; set; }
 
         public float[] baseLevel { get; set; }
@@ -131,6 +137,7 @@ namespace LibDeltaSystem.Entities.ArkEntries.Dinosaur
 
     public class DinosaurEntryFood
     {
+        [WebFormatAttributeUseNameTable]
         public string classname { get; set; }
         public float foodEffectivenessMultiplier { get; set; }
         public float affinityOverride { get; set; }

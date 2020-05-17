@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LibDeltaSystem.Tools.DeltaWebFormat.Attributes;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -7,7 +8,9 @@ namespace LibDeltaSystem.Entities.ArkEntries.Dinosaur
     public class ItemEntry
     {
         public string classname { get; set; }
+        public ushort hash { get; set; }
 
+        [WebFormatAttributeUseObject]
         public DeltaAsset icon { get; set; }
 
         public bool hideFromInventoryDisplay { get; set; }
@@ -23,8 +26,10 @@ namespace LibDeltaSystem.Entities.ArkEntries.Dinosaur
         public float baseRepairingXP { get; set; }
         public int maxItemQuantity { get; set; }
 
+        public string structure_classname { get; set; } //The name of the structure this builds, if any
+
         //Consumables
-        public Dictionary<string, ItemEntry_ConsumableAddStatusValue> addStatusValues { get; set; }
+        public ItemEntry_ConsumableAddStatusValue[] addStatusValues { get; set; }
     }
 
     public class ItemEntry_ConsumableAddStatusValue
@@ -39,6 +44,7 @@ namespace LibDeltaSystem.Entities.ArkEntries.Dinosaur
         public float addOverTimeSpeed { get; set; }
         public float itemQualityAddValueMultiplier { get; set; }
 
+        [WebFormatAttributeUseNameTable]
         public string statusValueType { get; set; }
     }
 }

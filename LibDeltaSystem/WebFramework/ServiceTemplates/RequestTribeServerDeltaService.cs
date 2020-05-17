@@ -28,6 +28,11 @@ namespace LibDeltaSystem.WebFramework.ServiceTemplates
         /// </summary>
         public bool admin;
 
+        /// <summary>
+        /// Can this user request other tribes? Usually this is false, unless this user as an admin and secure mode is off
+        /// </summary>
+        public bool canRequestOtherTribes;
+
         public RequestTribeServerDeltaService(DeltaConnection conn, HttpContext e) : base(conn, e)
         {
         }
@@ -41,6 +46,7 @@ namespace LibDeltaSystem.WebFramework.ServiceTemplates
             //Get the player profile
             profile = await server.GetUserPlayerProfile(conn, user);
             admin = server.IsUserAdmin(user);
+            canRequestOtherTribes = admin && !server.secure_mode;
 
             //If no profile was found, this user doesn't even have access to this server
             if (profile == null && !admin)
@@ -77,35 +83,23 @@ namespace LibDeltaSystem.WebFramework.ServiceTemplates
             return true;
         }
 
-        /// <summary>
-        /// Checks if a tribe ID is allowed to be used
-        /// </summary>
-        /// <param name="tribeId"></param>
-        /// <returns></returns>
-        public bool CheckIfTribeIdAllowed(int tribeId)
-        {
-            if(admin)
-            {
-                if (requestedTribeId.HasValue)
-                    return requestedTribeId.Value == tribeId;
-                else
-                    return true;
-            } else
-            {
-                return tribeId == profile.tribe_id;
-            }
-        }
-
         public FilterDefinition<T> GetServerTribeFilter<T>()
         {
             var builder = Builders<T>.Filter;
-            if(admin)
+            if(admin && canRequestOtherTribes)
             {
                 //This user is admin, they may request whatever they want
                 if (requestedTribeId.HasValue)
                     return builder.Eq("server_id", server._id) & builder.Eq("tribe_id", requestedTribeId.Value);
                 else
                     return builder.Eq("server_id", server._id);
+            } else if(admin && !canRequestOtherTribes)
+            {
+                //This user is admin, but they can't request whatever they want because secure mode is on
+                if (requestedTribeId.GetValueOrDefault(-2) == profile.tribe_id || !requestedTribeId.HasValue)
+                    return builder.Eq("server_id", server._id) & builder.Eq("tribe_id", profile.tribe_id);
+                else
+                    return builder.Eq("server_id", server._id) & builder.Eq<int?>("tribe_id", null);
             } else
             {
                 //This player may only fetch their own tribe. We checked that this is the selected tribe when we first requested this.

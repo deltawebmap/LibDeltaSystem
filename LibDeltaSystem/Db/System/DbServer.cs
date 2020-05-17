@@ -112,6 +112,16 @@ namespace LibDeltaSystem.Db.System
         public int last_client_version { get; set; }
 
         /// <summary>
+        /// In secure mode, admins cannot access other tribes data. This can help to ensure tribes that there is no admin abuse
+        /// </summary>
+        public bool secure_mode { get; set; }
+
+        /// <summary>
+        /// The last time secure mode was toggled. Used to notify users if it's been changed
+        /// </summary>
+        public DateTime last_secure_mode_toggled { get; set; }
+
+        /// <summary>
         /// Returns the player profile by ID
         /// </summary>
         /// <param name="steamId"></param>
@@ -131,8 +141,7 @@ namespace LibDeltaSystem.Db.System
         /// <returns></returns>
         public bool CheckIsUserAdmin(DbUser user)
         {
-            //TODO!!!!!!
-            return true;
+            return admins.Contains(user._id) || user._id == owner_uid;
         }
 
         public async Task<ArkMapEntry> GetMapEntryAsync(DeltaConnection conn)
@@ -277,11 +286,15 @@ namespace LibDeltaSystem.Db.System
         /// </summary>
         /// <param name="steamId"></param>
         /// <returns></returns>
-        public async Task<List<DbPlayerProfile>> GetPlayerProfiles(DeltaConnection conn)
+        public async Task<List<DbPlayerProfile>> GetPlayerProfiles(DeltaConnection conn, int offset = 0, int limit = int.MaxValue)
         {
             var filterBuilder = Builders<DbPlayerProfile>.Filter;
             var filter = filterBuilder.Eq("server_id", _id);
-            var results = await conn.content_player_profiles.FindAsync(filter);
+            var results = await conn.content_player_profiles.FindAsync(filter, new FindOptions<DbPlayerProfile, DbPlayerProfile>
+            {
+                Skip = offset,
+                Limit = limit
+            });
             return await results.ToListAsync();
         }
 
@@ -312,7 +325,7 @@ namespace LibDeltaSystem.Db.System
         public async Task<int?> TryGetTribeIdAsync(DeltaConnection conn, string steamId)
         {
             var filterBuilder = Builders<DbPlayerProfile>.Filter;
-            var filter = filterBuilder.Eq("server_id", id) & filterBuilder.Eq("steam_id", steamId);
+            var filter = filterBuilder.Eq("server_id", _id) & filterBuilder.Eq("steam_id", steamId);
             var results = await conn.content_player_profiles.FindAsync(filter);
             var r = await results.FirstOrDefaultAsync();
             if (r == null)
@@ -486,6 +499,18 @@ namespace LibDeltaSystem.Db.System
 
             //Notify the user that a new server is now owned by them
             await RPCMessageTool.SendUserServerClaimed(conn, owner, this);
+        }
+
+        /// <summary>
+        /// Gets the cluster for this server
+        /// </summary>
+        /// <param name="conn"></param>
+        /// <returns></returns>
+        public async Task<DbCluster> GetClusterAsync(DeltaConnection conn)
+        {
+            if (cluster_id == null)
+                return null;
+            return await DbCluster.GetClusterById(conn, ObjectId.Parse(cluster_id));
         }
     }
 

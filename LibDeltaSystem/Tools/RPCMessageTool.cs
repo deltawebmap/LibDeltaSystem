@@ -18,6 +18,17 @@ namespace LibDeltaSystem.Tools
     public static class RPCMessageTool
     {
         /// <summary>
+        /// Triggers user groups to be refreshsed
+        /// </summary>
+        /// <param name="conn"></param>
+        /// <param name="user"></param>
+        /// <returns></returns>
+        public static async Task SystemUserGroupReset(DeltaConnection conn, DbUser user)
+        {
+            //TODO
+        }
+        
+        /// <summary>
         /// Sent when there is a content update (when the database changes)
         /// </summary>
         /// <param name="conn"></param>
@@ -109,6 +120,22 @@ namespace LibDeltaSystem.Tools
 
             //Send
             await rpc.SendRPCMsgToUserID(RPC.RPCOpcode.RPCPayload30001UserServerClaimed, payload, claimer);
+        }
+
+        public static async Task SendUserServerJoined(DeltaConnection conn, DbUser claimer, DbServer guild)
+        {
+            //Create payload
+            RPCPayload30002UserServerJoined payload = new RPCPayload30002UserServerJoined
+            {
+                guild = await NetGuildUser.GetNetGuild(conn, guild, claimer),
+                cluster = NetCluster.GetCluster(await guild.GetClusterAsync(conn))
+            };
+
+            //Get RPC
+            var rpc = conn.GetRPC();
+
+            //Send
+            await rpc.SendRPCMsgToUserID(RPC.RPCOpcode.RPCPayload30001UserServerJoined, payload, claimer);
         }
     }
 }

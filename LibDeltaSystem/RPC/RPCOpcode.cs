@@ -12,6 +12,7 @@ namespace LibDeltaSystem.RPC
         RPCServer20002PartialUpdate = 20002,
         RPCServer20002CanvasEvent = 20003,
 
-        RPCPayload30001UserServerClaimed = 30001
+        RPCPayload30001UserServerClaimed = 30001,
+        RPCPayload30001UserServerJoined = 30002
     }
 }

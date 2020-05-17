@@ -144,5 +144,13 @@ namespace LibDeltaSystem.WebFramework
                 return method;
             return DeltaCommonHTTPMethod.Unknown;
         }
+
+        public bool TryGetIntFromQuery(string name, out int value)
+        {
+            value = 0;
+            if (!e.Request.Query.ContainsKey(name))
+                return false;
+            return int.TryParse(e.Request.Query[name], out value);
+        }
     }
 }

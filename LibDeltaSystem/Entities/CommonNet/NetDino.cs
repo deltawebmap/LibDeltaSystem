@@ -1,4 +1,5 @@
 ﻿using LibDeltaSystem.Db.Content;
+using LibDeltaSystem.Tools.DeltaWebFormat.Attributes;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -7,30 +8,36 @@ namespace LibDeltaSystem.Entities.CommonNet
 {
     public class NetDino
     {
-        public int tribe_id;
-        public string dino_id;
-        public bool is_female;
-        public int[] colors;
-        public string[] colors_hex;
-        public string tamed_name;
-        public string tamer_name;
-        public string classname;
-        public float[] current_stats;
-        public float[] max_stats;
-        public int[] base_levelups_applied;
-        public int[] tamed_levelups_applied;
-        public int base_level;
-        public int level;
-        public float experience;
-        public bool is_baby;
-        public float baby_age;
-        public double next_imprint_time;
-        public float imprint_quality;
-        public DbLocation location;
-        public string status;
-        public float taming_effectiveness;
-        public bool is_cryo;
-        public float experience_points;
+        public int tribe_id { get; set; }
+        public string dino_id { get; set; }
+        public bool is_female { get; set; }
+        public int[] colors { get; set; }
+        public string[] colors_hex { get; set; }
+        public string tamed_name { get; set; }
+        [WebFormatAttributeUseNameTable]
+        public string tamer_name { get; set; }
+        [WebFormatAttributeUseNameTable]
+        public string classname { get; set; }
+        public float[] current_stats { get; set; }
+        public float[] max_stats { get; set; }
+        public int[] base_levelups_applied { get; set; }
+        public int[] tamed_levelups_applied { get; set; }
+        public int base_level { get; set; }
+        public int level { get; set; }
+        public float experience { get; set; }
+        public bool is_baby { get; set; }
+        public float baby_age { get; set; }
+        public double next_imprint_time { get; set; }
+        public float imprint_quality { get; set; }
+        [WebFormatAttributeUseObject]
+        public DbLocation location { get; set; }
+        [WebFormatAttributeUseNameTable]
+        public string status { get; set; }
+        public float taming_effectiveness { get; set; }
+        public bool is_cryo { get; set; }
+        public float experience_points { get; set; }
+        public DateTime last_sync_time { get; set; }
+        public bool is_alive { get; set; }
 
         public static NetDino ConvertDbDino(DbDino dino)
         {
@@ -59,7 +66,9 @@ namespace LibDeltaSystem.Entities.CommonNet
                 status = dino.status,
                 taming_effectiveness = dino.taming_effectiveness,
                 is_cryo = dino.is_cryo,
-                experience_points = dino.experience_points
+                experience_points = dino.experience_points,
+                last_sync_time = dino.last_sync_time,
+                is_alive = dino.is_alive
             };
         }
     }
