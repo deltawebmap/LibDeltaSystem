@@ -96,10 +96,12 @@ namespace LibDeltaSystem.WebFramework.ServiceTemplates
             } else if(admin && !canRequestOtherTribes)
             {
                 //This user is admin, but they can't request whatever they want because secure mode is on
-                if (requestedTribeId.GetValueOrDefault(-2) == profile.tribe_id || !requestedTribeId.HasValue)
-                    return builder.Eq("server_id", server._id) & builder.Eq("tribe_id", profile.tribe_id);
-                else
-                    return builder.Eq("server_id", server._id) & builder.Eq<int?>("tribe_id", null);
+                if(profile != null && requestedTribeId.HasValue)
+                {
+                    if (requestedTribeId.Value == profile?.tribe_id || !requestedTribeId.HasValue)
+                        return builder.Eq("server_id", server._id) & builder.Eq("tribe_id", profile.tribe_id);
+                }
+                return builder.Eq("server_id", server._id) & builder.Eq<int>("tribe_id", 0); //Shouldn't return other tribes
             } else
             {
                 //This player may only fetch their own tribe. We checked that this is the selected tribe when we first requested this.

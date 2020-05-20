@@ -1079,5 +1079,27 @@ namespace LibDeltaSystem
                 return false;
             }
         }
+
+        /// <summary>
+        /// Creates a new beta key
+        /// </summary>
+        /// <returns></returns>
+        public async Task<string> GenerateBetaKey(string note)
+        {
+            //Generate key
+            char[] key = SecureStringTool.GenerateSecureString(14).ToCharArray();
+            key[4] = '-';
+            key[9] = '-';
+
+            //Add key
+            await system_beta_keys.InsertOneAsync(new DbBetaKey
+            {
+                claimed = false,
+                key = new string(key),
+                note = note,
+            });
+
+            return new string(key);
+        }
     }
 }

@@ -30,11 +30,6 @@ namespace LibDeltaSystem.Db.System
         public bool has_custom_image { get; set; }
 
         /// <summary>
-        /// The machine this is connected to. Can be null if created using the mods.
-        /// </summary>
-        public string machine_uid { get; set; }
-
-        /// <summary>
         /// ID of the owner of the server
         /// </summary>
         public ObjectId? owner_uid { get; set; }
@@ -70,16 +65,10 @@ namespace LibDeltaSystem.Db.System
         public string[] mods { get; set; }
 
         /// <summary>
-        /// Lock flags, in terms of bits. 0 if OK to load
-        /// https://docs.google.com/spreadsheets/d/1zQ_r86uyDAvwAtEg0135rL6g2lHqhPtYAgFdJrL3vZc/edit?folder=0AOcXNqRr5p22Uk9PVA#gid=242769975 (only lower bits are used)
-        /// </summary>
-        public uint lock_flags { get; set; }
-
-        /// <summary>
         /// Permissions, in terms of bits.
         /// https://docs.google.com/spreadsheets/d/1zQ_r86uyDAvwAtEg0135rL6g2lHqhPtYAgFdJrL3vZc/edit?folder=0AOcXNqRr5p22Uk9PVA#gid=0
         /// </summary>
-        public ulong permission_flags { get; set; }
+        public uint permission_flags { get; set; }
 
         /// <summary>
         /// Is this server a PVP server?
@@ -99,7 +88,7 @@ namespace LibDeltaSystem.Db.System
         /// <summary>
         /// Delta Web Map user IDs with admin access. Does not include owner UID
         /// </summary>
-        public ObjectId[] admins { get; set; } = new ObjectId[0];
+        public List<ObjectId> admins { get; set; } = new List<ObjectId>();
 
         /// <summary>
         /// The time the last ARK client contacted the server on, represented in DateTime ticks
@@ -144,6 +133,11 @@ namespace LibDeltaSystem.Db.System
             return admins.Contains(user._id) || user._id == owner_uid;
         }
 
+        public bool IsUserOwner(DbUser user)
+        {
+            return user._id == owner_uid;
+        }
+
         public async Task<ArkMapEntry> GetMapEntryAsync(DeltaConnection conn)
         {
             return await conn.GetARKMapByInternalName(latest_server_map);
@@ -160,16 +154,6 @@ namespace LibDeltaSystem.Db.System
         }
 
         /// <summary>
-        /// Checks a lock flag at a bit index
-        /// </summary>
-        /// <param name="index"></param>
-        /// <returns></returns>
-        public bool CheckLockFlag(int index)
-        {
-            return ((lock_flags >> index) & 1U) == 1;
-        }
-
-        /// <summary>
         /// Returns all permission flags as an array of bools
         /// </summary>
         /// <returns></returns>
@@ -179,40 +163,6 @@ namespace LibDeltaSystem.Db.System
             for (int i = 0; i < response.Length; i++)
                 response[i] = CheckPermissionFlag(i);
             return response;
-        }
-
-        /// <summary>
-        /// Updates the listed permission flags.
-        /// </summary>
-        /// <param name="points"></param>
-        /// <returns></returns>
-        public void SetPermissionFlags(bool[] points)
-        {
-            //Verify
-            if (points.Length != 64)
-                throw new Exception("Points array length does not match 64.");
-
-            //Set
-            for (int i = 0; i < 64; i++)
-            {
-                if(points[i])
-                    permission_flags |= 1UL << i;
-                else
-                    permission_flags &= ~(1UL << i);
-            }
-        }
-
-        /// <summary>
-        /// Sets a lock flag, but DOES NOT SAVE
-        /// </summary>
-        /// <param name="index"></param>
-        /// <param name="flag"></param>
-        public void SetLockFlag(int index, bool flag)
-        {
-            if (flag)
-                lock_flags |= 1u << index;
-            else
-                lock_flags &= ~(1u << index);
         }
 
         /// <summary>
@@ -275,9 +225,18 @@ namespace LibDeltaSystem.Db.System
         /// <returns></returns>
         public async Task<bool> DeleteUserPlayerProfile(DeltaConnection conn, DbUser user)
         {
+            ///Remove
             var filterBuilder = Builders<DbPlayerProfile>.Filter;
             var filter = filterBuilder.Eq("server_id", _id) & filterBuilder.Eq("steam_id", user.steam_id);
             var results = await conn.content_player_profiles.DeleteOneAsync(filter);
+
+            //Notify of the person leaving if they aren't admin or owner
+            if(!admins.Contains(user._id) && owner_uid != user._id)
+                await NotifyUserRemoved(conn, user);
+
+            //Reset user groups
+            await RPCMessageTool.SystemNotifyUserGroupReset(conn, user);
+
             return results.DeletedCount == 1;
         }
 
@@ -511,6 +470,53 @@ namespace LibDeltaSystem.Db.System
             if (cluster_id == null)
                 return null;
             return await DbCluster.GetClusterById(conn, ObjectId.Parse(cluster_id));
+        }
+
+        public async Task ChangeSecureMode(DeltaConnection conn, bool secure)
+        {
+            //Update
+            await ExplicitUpdateAsync(conn, Builders<DbServer>.Update.Set("secure_mode", secure).Set("last_secure_mode_toggled", DateTime.UtcNow));
+
+            //Send RPC message
+            RPCMessageTool.SendGuildSetSecureMode(conn, this, secure);
+        }
+
+        public async Task ChangePermissionFlags(DeltaConnection conn, uint flags)
+        {
+            //Update
+            this.permission_flags = flags;
+            await ExplicitUpdateAsync(conn, Builders<DbServer>.Update.Set("permission_flags", flags));
+
+            //Send RPC message
+            RPCMessageTool.SendGuildPermissionChanged(conn, this);
+        }
+
+        public async Task<bool> RemoveAdmin(DeltaConnection conn, DbUser user)
+        {
+            //Change admins
+            if (!admins.Contains(user._id))
+                return false;
+            admins.Remove(user._id);
+            
+            //Update
+            await ExplicitUpdateAsync(conn, Builders<DbServer>.Update.Set("admins", admins));
+
+            //Send RPC message
+            RPCMessageTool.SendUserServerPermissionsChanged(conn, user._id, this); //Tell this user about the change
+            RPCMessageTool.SendGuildAdminListUpdated(conn, this); //Tell users on the server
+            await RPCMessageTool.SystemNotifyUserGroupReset(conn, user); //Reset user groups
+
+            //If this user doesn't have a profile and isn't owner, that means that they've lost access. Tell them that
+            if (await GetUserPlayerProfile(conn, user) == null && owner_uid != user._id)
+                await NotifyUserRemoved(conn, user);
+
+            return true;
+        }
+
+        public async Task NotifyUserRemoved(DeltaConnection conn, DbUser user)
+        {
+            RPCMessageTool.SendUserServerRemoved(conn, user._id, this);
+            RPCMessageTool.SendGuildUserRemoved(conn, this, user);
         }
     }
 

@@ -165,7 +165,7 @@ namespace LibDeltaSystem
             return Convert.FromBase64String(_conn.config.rpc_key);
         }
 
-        public async Task SendRPCMsgToUserID(RPCOpcode opcode, RPCPayload payload, ObjectId user_id)
+        public async Task SendRPCMsgToUserID(RPCOpcode opcode, RPCPayload payload, ObjectId user_id, ObjectId? target_server = null)
         {
             //Create payload data
             RPCMessageContainer msg = new RPCMessageContainer
@@ -173,7 +173,7 @@ namespace LibDeltaSystem
                 opcode = opcode,
                 payload = payload,
                 source = _conn.system_name,
-                target_server = null
+                target_server = target_server?.ToString()
             };
 
             //Create filter
@@ -236,6 +236,11 @@ namespace LibDeltaSystem
         public async Task SendRPCMsgToServerTribe(RPCOpcode opcode, RPCPayload payload, DbServer server, int tribe_id)
         {
             await SendRPCMsgToServerTribe(opcode, payload, server._id, tribe_id);
+        }
+
+        public async Task SendNotifyUserGroupsUpdated(ObjectId user_id)
+        {
+            await _SendMessage(2, user_id.ToByteArray());
         }
     }
 }

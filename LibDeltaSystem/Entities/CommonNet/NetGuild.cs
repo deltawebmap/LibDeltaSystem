@@ -14,6 +14,7 @@ namespace LibDeltaSystem.Entities.CommonNet
         public string cluster_id;
         public string id;
         public string map_id;
+        public uint permission_flags;
 
         public bool secure_mode;
         public DateTime last_secure_mode_toggled;
@@ -26,14 +27,6 @@ namespace LibDeltaSystem.Entities.CommonNet
             if (mapData != null)
                 mapName = mapData.displayName;
 
-            //Get closed reason, if any
-            int close = -1;
-            for (int i = 31; i >= 0; i--)
-            {
-                if (server.CheckLockFlag(i))
-                    close = i;
-            }
-
             //Set
             display_name = server.display_name;
             image_url = server.image_url;
@@ -43,6 +36,7 @@ namespace LibDeltaSystem.Entities.CommonNet
             map_id = server.latest_server_map;
             secure_mode = server.secure_mode;
             last_secure_mode_toggled = server.last_secure_mode_toggled;
+            permission_flags = server.permission_flags;
         }
 
         public static async Task<NetGuildUser> GetGuild(DeltaConnection conn, DbServer server)

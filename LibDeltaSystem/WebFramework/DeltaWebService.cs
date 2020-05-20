@@ -120,6 +120,27 @@ namespace LibDeltaSystem.WebFramework
         }
 
         /// <summary>
+        /// Attemps to read POST content and writes errors if it fails. Returns null if failed
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public async Task<T> ReadPOSTContentChecked<T>(string method = "POST")
+        {
+            if (e.Request.Method.ToUpper() != method)
+            {
+                await WriteString("Only "+method+" requests are allowed here.", "text/plain", 400);
+                return default(T);
+            }
+            T request = await DecodePOSTBody<T>();
+            if (request == null)
+            {
+                await WriteString("No " + method + " body provided.", "text/plain", 400);
+                return default(T);
+            }
+            return request;
+        }
+
+        /// <summary>
         /// Ends the laest checkpoint and logs data if debug mode is on
         /// </summary>
         public void EndDebugCheckpoint(string name)

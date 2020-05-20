@@ -23,9 +23,13 @@ namespace LibDeltaSystem.Tools
         /// <param name="conn"></param>
         /// <param name="user"></param>
         /// <returns></returns>
-        public static async Task SystemUserGroupReset(DeltaConnection conn, DbUser user)
+        public static async Task SystemNotifyUserGroupReset(DeltaConnection conn, DbUser user)
         {
-            //TODO
+            //Get RPC
+            var rpc = conn.GetRPC();
+
+            //Send
+            await rpc.SendNotifyUserGroupsUpdated(user._id);
         }
         
         /// <summary>
@@ -106,6 +110,69 @@ namespace LibDeltaSystem.Tools
             //Send
             await rpc.SendRPCMsgToServer(RPC.RPCOpcode.RPCSystem10002GuildUpdate, payload, guild._id);
         }
+        
+        public static async Task SendGuildSetSecureMode(DeltaConnection conn, DbServer guild, bool secure)
+        {
+            //Create payload
+            RPCPayload20004SecureModeToggled payload = new RPCPayload20004SecureModeToggled
+            {
+                secure = secure
+            };
+
+            //Get RPC
+            var rpc = conn.GetRPC();
+
+            //Send
+            await rpc.SendRPCMsgToServer(RPC.RPCOpcode.RPCServer20004SecureModeToggled, payload, guild._id);
+        }
+
+        public static async Task SendGuildPermissionChanged(DeltaConnection conn, DbServer guild)
+        {
+            //Create payload
+            RPCPayload20005GuildPermissionsChanged payload = new RPCPayload20005GuildPermissionsChanged
+            {
+                flags = guild.permission_flags
+            };
+
+            //Get RPC
+            var rpc = conn.GetRPC();
+
+            //Send
+            await rpc.SendRPCMsgToServer(RPC.RPCOpcode.RPCServer20005GuildPermissionsChanged, payload, guild._id);
+        }
+
+        public static async Task SendGuildAdminListUpdated(DeltaConnection conn, DbServer guild)
+        {
+            //Create payload
+            RPCPayload20006GuildAdminListUpdated payload = new RPCPayload20006GuildAdminListUpdated
+            {
+                admins = guild.admins
+            };
+
+            //Get RPC
+            var rpc = conn.GetRPC();
+
+            //Send
+            await rpc.SendRPCMsgToServer(RPC.RPCOpcode.RPCServer20006GuildAdminListUpdated, payload, guild._id);
+        }
+        
+        public static async Task SendGuildUserRemoved(DeltaConnection conn, DbServer guild, DbUser user)
+        {
+            //Create payload
+            RPCPayload20007UserRemovedGuild payload = new RPCPayload20007UserRemovedGuild
+            {
+                icon = user.profile_image_url,
+                name = user.screen_name,
+                steam_id = user.steam_id,
+                user_id = user._id
+            };
+
+            //Get RPC
+            var rpc = conn.GetRPC();
+
+            //Send
+            await rpc.SendRPCMsgToServer(RPC.RPCOpcode.RPCServer20007UserRemovedGuild, payload, guild._id);
+        }
 
         public static async Task SendUserServerClaimed(DeltaConnection conn, DbUser claimer, DbServer guild)
         {
@@ -135,7 +202,38 @@ namespace LibDeltaSystem.Tools
             var rpc = conn.GetRPC();
 
             //Send
-            await rpc.SendRPCMsgToUserID(RPC.RPCOpcode.RPCPayload30001UserServerJoined, payload, claimer);
+            await rpc.SendRPCMsgToUserID(RPC.RPCOpcode.RPCPayload30002UserServerJoined, payload, claimer);
+        }
+
+        public static async Task SendUserServerPermissionsChanged(DeltaConnection conn, ObjectId user, DbServer guild)
+        {
+            //Create payload
+            RPCPayload30003UserServerPermissionsChanged payload = new RPCPayload30003UserServerPermissionsChanged
+            {
+                guild_id = guild._id,
+                is_admin = guild.admins.Contains(user)
+            };
+
+            //Get RPC
+            var rpc = conn.GetRPC();
+
+            //Send
+            await rpc.SendRPCMsgToUserID(RPC.RPCOpcode.RPCPayload30003UserServerPermissionsChanged, payload, user, guild._id);
+        }
+
+        public static async Task SendUserServerRemoved(DeltaConnection conn, ObjectId user, DbServer guild)
+        {
+            //Create payload
+            RPCPayload30004UserServerRemoved payload = new RPCPayload30004UserServerRemoved
+            {
+                guild_id = guild._id
+            };
+
+            //Get RPC
+            var rpc = conn.GetRPC();
+
+            //Send
+            await rpc.SendRPCMsgToUserID(RPC.RPCOpcode.RPCPayload30004UserServerRemoved, payload, user, guild._id);
         }
     }
 }
