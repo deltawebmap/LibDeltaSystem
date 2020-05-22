@@ -219,5 +219,11 @@ namespace LibDeltaSystem.Db.Content
         {
             return max_stats[(int)stat];
         }
+
+        public static async Task DeleteServerContent(DeltaConnection conn, ObjectId server_id)
+        {
+            var filter = Builders<DbDino>.Filter.Eq("server_id", server_id);
+            await conn.content_dinos.DeleteOneAsync(filter);
+        }
     }
 }

@@ -174,6 +174,21 @@ namespace LibDeltaSystem.Tools
             await rpc.SendRPCMsgToServer(RPC.RPCOpcode.RPCServer20007UserRemovedGuild, payload, guild._id);
         }
 
+        public static async Task SendGuildServerRemoved(DeltaConnection conn, DbServer guild)
+        {
+            //Create payload
+            RPCPayload30004UserServerRemoved payload = new RPCPayload30004UserServerRemoved
+            {
+                guild_id = guild._id
+            };
+
+            //Get RPC
+            var rpc = conn.GetRPC();
+
+            //Send
+            await rpc.SendRPCMsgToServer(RPC.RPCOpcode.RPCPayload30004UserServerRemoved, payload, guild._id);
+        }
+
         public static async Task SendUserServerClaimed(DeltaConnection conn, DbUser claimer, DbServer guild)
         {
             //Create payload

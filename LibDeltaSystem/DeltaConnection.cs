@@ -26,7 +26,8 @@ namespace LibDeltaSystem
         public const int LIB_VERSION_MAJOR = 0;
         public const int LIB_VERSION_MINOR = 1;
 
-        public const string SYSTEM_USER_TEST = "$SYSTEM.DEBUG_BUILD_USER";
+        public const string SYSTEM_USER_TEST_STEAM = "76561198300124500";
+        public const string SYSTEM_USER_TEST_DELTA = "5e44331adc8304aec01ec965";
         
         private MongoClient content_client;
         private IMongoDatabase content_database;

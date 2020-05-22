@@ -1,6 +1,9 @@
-﻿using System;
+﻿using MongoDB.Bson;
+using MongoDB.Driver;
+using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace LibDeltaSystem.Db.Content
 {
@@ -60,5 +63,11 @@ namespace LibDeltaSystem.Db.Content
         public float? stamina { get; set; }
         public float? weight { get; set; }
         public float? food { get; set; }
+
+        public static async Task DeleteServerContent(DeltaConnection conn, ObjectId server_id)
+        {
+            var filter = Builders<DbPlayerProfile>.Filter.Eq("server_id", server_id);
+            await conn.content_player_profiles.DeleteOneAsync(filter);
+        }
     }
 }

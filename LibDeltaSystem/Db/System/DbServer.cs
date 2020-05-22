@@ -195,17 +195,6 @@ namespace LibDeltaSystem.Db.System
         }
 
         /// <summary>
-        /// Deletes this in the database async
-        /// </summary>
-        /// <returns></returns>
-        public async Task DeleteAsync(DeltaConnection conn)
-        {
-            var filterBuilder = Builders<DbServer>.Filter;
-            var filter = filterBuilder.Eq("_id", _id);
-            await conn.system_servers.FindOneAndDeleteAsync(filter);
-        }
-
-        /// <summary>
         /// Returns the player profile for a user, if any
         /// </summary>
         /// <param name="steamId"></param>
@@ -517,6 +506,23 @@ namespace LibDeltaSystem.Db.System
         {
             RPCMessageTool.SendUserServerRemoved(conn, user._id, this);
             RPCMessageTool.SendGuildUserRemoved(conn, this, user);
+        }
+
+        public async Task DeleteServer(DeltaConnection conn)
+        {
+            //Delete this
+            var filter = Builders<DbServer>.Filter.Eq("_id", this._id);
+            await conn.system_servers.DeleteOneAsync(filter);
+
+            //Delete content
+            await DbTribe.DeleteServerContent(conn, this._id);
+            await DbStructure.DeleteServerContent(conn, this._id);
+            await DbInventory.DeleteServerContent(conn, this._id);
+            await DbDino.DeleteServerContent(conn, this._id);
+            await DbPlayerProfile.DeleteServerContent(conn, this._id);
+
+            //Send RPC event to all
+            RPCMessageTool.SendGuildServerRemoved(conn, this);
         }
     }
 

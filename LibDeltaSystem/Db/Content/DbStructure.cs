@@ -1,5 +1,6 @@
 ﻿using LibDeltaSystem.Db.System;
 using LibDeltaSystem.Entities.ArkEntries.Dinosaur;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
@@ -100,6 +101,12 @@ namespace LibDeltaSystem.Db.Content
                 return entry != null;
             }
             return false;
+        }
+
+        public static async Task DeleteServerContent(DeltaConnection conn, ObjectId server_id)
+        {
+            var filter = Builders<DbStructure>.Filter.Eq("server_id", server_id);
+            await conn.content_structures.DeleteOneAsync(filter);
         }
     }
 }

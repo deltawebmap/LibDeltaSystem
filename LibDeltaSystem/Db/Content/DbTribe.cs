@@ -1,6 +1,9 @@
-﻿using System;
+﻿using MongoDB.Bson;
+using MongoDB.Driver;
+using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace LibDeltaSystem.Db.Content
 {
@@ -23,5 +26,11 @@ namespace LibDeltaSystem.Db.Content
         /// Last time this tribe was seen online
         /// </summary>
         public DateTime last_seen { get; set; }
+
+        public static async Task DeleteServerContent(DeltaConnection conn, ObjectId server_id)
+        {
+            var filter = Builders<DbTribe>.Filter.Eq("server_id", server_id);
+            await conn.content_tribes.DeleteOneAsync(filter);
+        }
     }
 }

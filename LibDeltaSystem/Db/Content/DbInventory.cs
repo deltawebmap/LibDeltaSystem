@@ -1,6 +1,9 @@
-﻿using System;
+﻿using MongoDB.Bson;
+using MongoDB.Driver;
+using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace LibDeltaSystem.Db.Content
 {
@@ -29,6 +32,12 @@ namespace LibDeltaSystem.Db.Content
         {
             Dino = 0,
             Structure = 1,
+        }
+
+        public static async Task DeleteServerContent(DeltaConnection conn, ObjectId server_id)
+        {
+            var filter = Builders<DbInventory>.Filter.Eq("server_id", server_id);
+            await conn.content_inventories.DeleteOneAsync(filter);
         }
 
         public class DbInventory_InventoryItem
