@@ -64,6 +64,7 @@ namespace LibDeltaSystem
         public IMongoCollection<DbAlertBanner> system_alert_banners;
         public IMongoCollection<DbQueuedSyncRequest> system_queued_sync_commands;
         public IMongoCollection<DbBetaKey> system_beta_keys;
+        public IMongoCollection<DbAuthenticationSession> system_auth_sessions;
 
         public IMongoCollection<DbArkEntry<DinosaurEntry>> arkentries_dinos;
         public IMongoCollection<DbArkEntry<ItemEntry>> arkentries_items;
@@ -131,6 +132,7 @@ namespace LibDeltaSystem
             system_alert_banners = system_database.GetCollection<DbAlertBanner>("alert_banners");
             system_queued_sync_commands = system_database.GetCollection<DbQueuedSyncRequest>("queued_sync_commands");
             system_beta_keys = system_database.GetCollection<DbBetaKey>("beta_keys");
+            system_auth_sessions = system_database.GetCollection<DbAuthenticationSession>("auth_sessions");
 
             charlie_database = content_client.GetDatabase("delta-" + config.env + "-charlie");
             arkentries_dinos = charlie_database.GetCollection<DbArkEntry<DinosaurEntry>>("dino_entries");
@@ -368,6 +370,17 @@ namespace LibDeltaSystem
         {
             var filterBuilder = Builders<DbOauthApp>.Filter;
             var filter = filterBuilder.Eq("client_id", id);
+            var result = await system_oauth_apps.FindAsync(filter);
+            DbOauthApp c = await result.FirstOrDefaultAsync();
+            if (c == null)
+                return null;
+            return c;
+        }
+
+        public async Task<DbOauthApp> GetOAuthAppByInternalID(ObjectId id)
+        {
+            var filterBuilder = Builders<DbOauthApp>.Filter;
+            var filter = filterBuilder.Eq("_id", id);
             var result = await system_oauth_apps.FindAsync(filter);
             DbOauthApp c = await result.FirstOrDefaultAsync();
             if (c == null)

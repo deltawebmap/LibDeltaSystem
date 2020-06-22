@@ -250,5 +250,21 @@ namespace LibDeltaSystem.Tools
             //Send
             await rpc.SendRPCMsgToUserID(RPC.RPCOpcode.RPCPayload30004UserServerRemoved, payload, user, guild._id);
         }
+
+        public static async Task SendUserArkRpcAck(DeltaConnection conn, ObjectId user, ObjectId guild_id, ObjectId rpc_id, Dictionary<string, string> custom_data)
+        {
+            //Create payload
+            RPCPayload20008ArkRpcAck payload = new RPCPayload20008ArkRpcAck
+            {
+                rpc_id = rpc_id,
+                custom_data = custom_data
+            };
+
+            //Get RPC
+            var rpc = conn.GetRPC();
+
+            //Send
+            await rpc.SendRPCMsgToUserID(RPC.RPCOpcode.RPCServer20008ArkRpcAck, payload, user, guild_id);
+        }
     }
 }

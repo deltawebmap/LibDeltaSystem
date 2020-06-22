@@ -153,10 +153,14 @@ namespace LibDeltaSystem.WebFramework
             checkpoint_name = name;
         }
 
-        public void Log(string topic, string msg)
+        public void Log(string topic, string msg, ConsoleColor color = ConsoleColor.White)
         {
             if (conn.debug_mode)
+            {
+                Console.ForegroundColor = color;
                 Console.WriteLine($"[DeltaWebService@{_request_id}: {topic}] {msg}");
+                Console.ForegroundColor = ConsoleColor.White;
+            }
         }
 
         public DeltaCommonHTTPMethod GetMethod()

@@ -32,6 +32,11 @@ namespace LibDeltaSystem.Db.System
         /// </summary>
         public string payload { get; set; }
 
+        /// <summary>
+        /// The user ID of the sender for this message
+        /// </summary>
+        public ObjectId sender_id { get; set; }
+
         public T DecodePayload<T>()
         {
             return JsonConvert.DeserializeObject<T>(payload);

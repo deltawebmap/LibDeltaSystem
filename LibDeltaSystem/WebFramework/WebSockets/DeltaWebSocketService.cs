@@ -56,8 +56,9 @@ namespace LibDeltaSystem.WebFramework.WebSockets
                     result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
                 }
                 await socket.CloseAsync(result.CloseStatus.Value, result.CloseStatusDescription, CancellationToken.None);
-            } catch
+            } catch (Exception ex)
             {
+                Log("DISCONNECT", "Disconnected socket because of an error in the download loop: "+ex.Message + ex.StackTrace, ConsoleColor.Red);
                 try
                 {
                     await sock.CloseAsync(WebSocketCloseStatus.InternalServerError, "INTERNAL_DELTA_SERVER_ERROR", CancellationToken.None);
@@ -85,10 +86,14 @@ namespace LibDeltaSystem.WebFramework.WebSockets
 
                 //Receive until end
                 result = await sock.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
-                while (!result.EndOfMessage)
+                while (true)
                 {
                     ms.Write(buffer, 0, result.Count);
-                    result = await sock.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                    Log("MULTIPART", $"Got {result.Count} bytes, {ms.Length} total bytes, EOM={result.EndOfMessage.ToString()}");
+                    if (!result.EndOfMessage)
+                        result = await sock.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                    else
+                        break;
                 }
 
                 //Finalize

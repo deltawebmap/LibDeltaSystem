@@ -76,11 +76,6 @@ namespace LibDeltaSystem.Db.System
         public bool is_pvp { get; set; }
 
         /// <summary>
-        /// Holds current revision IDs. Maximum of 32.
-        /// </summary>
-        public ulong[] revision_ids { get; set; } = new ulong[32];
-
-        /// <summary>
         /// Multiplier for how quickly events are sent from the ARK server. Requires reboot. 1 is default. Increase for larger servers
         /// </summary>
         public float update_speed_multiplier { get; set; } = 1;
@@ -131,6 +126,16 @@ namespace LibDeltaSystem.Db.System
         public bool CheckIsUserAdmin(DbUser user)
         {
             return admins.Contains(user._id) || user._id == owner_uid;
+        }
+
+        /// <summary>
+        /// Checks if a user is admin on this server
+        /// </summary>
+        /// <param name="user"></param>
+        /// <returns></returns>
+        public bool CheckIsUserAdmin(ObjectId user)
+        {
+            return admins.Contains(user) || user == owner_uid;
         }
 
         public bool IsUserOwner(DbUser user)

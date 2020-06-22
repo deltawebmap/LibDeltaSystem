@@ -89,9 +89,11 @@ namespace LibDeltaSystem
             }
         }
 
-        private void _Log(string topic, string msg)
+        private void _Log(string topic, string msg, ConsoleColor color = ConsoleColor.White)
         {
+            Console.ForegroundColor = color;
             Console.WriteLine($"[RPC: {topic}] {msg}");
+            Console.ForegroundColor = ConsoleColor.White;
         }
 
         private async Task _SendBytes(byte[] data)
@@ -100,9 +102,15 @@ namespace LibDeltaSystem
             try
             {
                 if (_connected)
+                {
+                    _Log("TRANSMIT", "Sending " + data.Length + " bytes to RPC NOW.", ConsoleColor.Green);
                     await _sock.SendAsync(data, WebSocketMessageType.Binary, true, CancellationToken.None);
+                }
                 else
+                {
+                    _Log("TRANSMIT", "Sending " + data.Length + " bytes to RPC LATER.", ConsoleColor.Green);
                     _queue.Enqueue(data);
+                }
             } catch (Exception ex)
             {
                 _Log("DISCONNECT", "Hit exception '" + ex.Message + "'. Reconnecting...");
