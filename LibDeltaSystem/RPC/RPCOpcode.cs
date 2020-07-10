@@ -17,6 +17,7 @@ namespace LibDeltaSystem.RPC
         RPCServer20007UserRemovedGuild = 20007,
         RPCServer20008ArkRpcAck = 20008,
         RPCServer20009LiveDinoUpdate = 20009,
+        RPCServer20010GuildPublicDetailsChanged = 20010,
 
         RPCPayload30001UserServerClaimed = 30001,
         RPCPayload30002UserServerJoined = 30002,

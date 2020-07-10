@@ -6,6 +6,6 @@ namespace LibDeltaSystem.RPC.Payloads.Server
 {
     public class RPCPayload20005GuildPermissionsChanged : RPCPayload
     {
-        public uint flags;
+        public int flags;
     }
 }

@@ -68,7 +68,7 @@ namespace LibDeltaSystem.Db.System
         /// Permissions, in terms of bits.
         /// https://docs.google.com/spreadsheets/d/1zQ_r86uyDAvwAtEg0135rL6g2lHqhPtYAgFdJrL3vZc/edit?folder=0AOcXNqRr5p22Uk9PVA#gid=0
         /// </summary>
-        public uint permission_flags { get; set; }
+        public int permission_flags { get; set; }
 
         /// <summary>
         /// Is this server a PVP server?
@@ -104,6 +104,16 @@ namespace LibDeltaSystem.Db.System
         /// The last time secure mode was toggled. Used to notify users if it's been changed
         /// </summary>
         public DateTime last_secure_mode_toggled { get; set; }
+        
+        /// <summary>
+        /// State flags
+        /// </summary>
+        public int flags { get; set; }
+
+        /// <summary>
+        /// The permissions setup template to use
+        /// </summary>
+        public string permissions_template { get; set; } = "NORMAL";
 
         /// <summary>
         /// Returns the player profile by ID
@@ -475,7 +485,7 @@ namespace LibDeltaSystem.Db.System
             RPCMessageTool.SendGuildSetSecureMode(conn, this, secure);
         }
 
-        public async Task ChangePermissionFlags(DeltaConnection conn, uint flags)
+        public async Task ChangePermissionFlags(DeltaConnection conn, int flags)
         {
             //Update
             this.permission_flags = flags;
@@ -528,6 +538,11 @@ namespace LibDeltaSystem.Db.System
 
             //Send RPC event to all
             RPCMessageTool.SendGuildServerRemoved(conn, this);
+        }
+
+        public async Task NotifyPublicDetailsChanged(DeltaConnection conn)
+        {
+            await RPCMessageTool.SendGuildPublicDetailsChanged(conn, this);
         }
     }
 

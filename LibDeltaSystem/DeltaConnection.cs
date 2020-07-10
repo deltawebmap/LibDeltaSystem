@@ -45,7 +45,6 @@ namespace LibDeltaSystem
 
         public IMongoCollection<DbUser> system_users;
         public IMongoCollection<DbToken> system_tokens;
-        public IMongoCollection<DbPreflightToken> system_preflight_tokens;
         public IMongoCollection<DbServer> system_servers;
         public IMongoCollection<DbMachine> system_machines;
         public IMongoCollection<DbSteamCache> system_steam_cache;
@@ -65,6 +64,7 @@ namespace LibDeltaSystem
         public IMongoCollection<DbQueuedSyncRequest> system_queued_sync_commands;
         public IMongoCollection<DbBetaKey> system_beta_keys;
         public IMongoCollection<DbAuthenticationSession> system_auth_sessions;
+        public IMongoCollection<DbSystemServer> system_delta_servers;
 
         public IMongoCollection<DbArkEntry<DinosaurEntry>> arkentries_dinos;
         public IMongoCollection<DbArkEntry<ItemEntry>> arkentries_items;
@@ -113,7 +113,6 @@ namespace LibDeltaSystem
             system_database = content_client.GetDatabase("delta-" + config.env + "-system");
             system_users = system_database.GetCollection<DbUser>("users");
             system_tokens = system_database.GetCollection<DbToken>("tokens");
-            system_preflight_tokens = system_database.GetCollection<DbPreflightToken>("preflight_tokens");
             system_servers = system_database.GetCollection<DbServer>("servers");
             system_machines = system_database.GetCollection<DbMachine>("machines");
             system_steam_cache = system_database.GetCollection<DbSteamCache>("steam_cache");
@@ -133,6 +132,7 @@ namespace LibDeltaSystem
             system_queued_sync_commands = system_database.GetCollection<DbQueuedSyncRequest>("queued_sync_commands");
             system_beta_keys = system_database.GetCollection<DbBetaKey>("beta_keys");
             system_auth_sessions = system_database.GetCollection<DbAuthenticationSession>("auth_sessions");
+            system_delta_servers = system_database.GetCollection<DbSystemServer>("delta_servers");
 
             charlie_database = content_client.GetDatabase("delta-" + config.env + "-charlie");
             arkentries_dinos = charlie_database.GetCollection<DbArkEntry<DinosaurEntry>>("dino_entries");
@@ -151,6 +151,26 @@ namespace LibDeltaSystem
             this.system_version_major = system_version_major;
             this.system_version_minor = system_version_minor;
             this.system_name = system_name;
+        }
+
+        public void Log(string topic, string message, DeltaLogLevel level)
+        {
+            //Translate level to console color
+            switch(level)
+            {
+                case DeltaLogLevel.Debug: Console.ForegroundColor = ConsoleColor.Cyan; break;
+                case DeltaLogLevel.Low: Console.ForegroundColor = ConsoleColor.White; break;
+                case DeltaLogLevel.Medium: Console.ForegroundColor = ConsoleColor.Yellow; break;
+                case DeltaLogLevel.High: Console.ForegroundColor = ConsoleColor.Red; break;
+                case DeltaLogLevel.Alert: Console.ForegroundColor = ConsoleColor.White; Console.BackgroundColor = ConsoleColor.Red; break;
+            }
+
+            //Log
+            Console.WriteLine($"[{topic}] {message}");
+
+            //Reset
+            Console.ForegroundColor = ConsoleColor.White;
+            Console.BackgroundColor = ConsoleColor.Black;
         }
 
         /// <summary>
@@ -271,15 +291,6 @@ namespace LibDeltaSystem
             var filter = filterBuilder.Eq("_id", id);
             var results = await collec.UpdateOneAsync(filter, update);
             return results.MatchedCount == 1;
-        }
-
-        public async Task<DbPreflightToken> GetPreflightTokenByTokenAsync(string s)
-        {
-            var filterBuilder = Builders<DbPreflightToken>.Filter;
-            var filter = filterBuilder.Eq("preflight_token", s);
-            var results = await system_preflight_tokens.FindAsync(filter);
-            var r = await results.FirstOrDefaultAsync();
-            return r;
         }
 
         /// <summary>
@@ -730,7 +741,24 @@ namespace LibDeltaSystem
 
             return u;
         }
-        
+
+        /// <summary>
+        /// Returns a user by their user ID. Returns null if not found.
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        public async Task<DbUser> GetUserByIdAsync(ObjectId id)
+        {
+            //Fetch
+            DbUser u = await GetDocumentById<DbUser>(system_users, id);
+
+            //If not found, return null
+            if (u == null)
+                return null;
+
+            return u;
+        }
+
         /// <summary>
         /// Returns all pending sync requests
         /// </summary>

@@ -1,4 +1,5 @@
-﻿using MongoDB.Driver;
+﻿using MongoDB.Bson;
+using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,32 +19,23 @@ namespace LibDeltaSystem.Db.System
         /// <summary>
         /// The user ID this maps to
         /// </summary>
-        public string user_id { get; set; }
+        public ObjectId user_id { get; set; }
 
         /// <summary>
         /// The time this token was created
         /// </summary>
-        public long created_utc { get; set; }
+        public DateTime created_utc { get; set; }
 
         /// <summary>
-        /// The type of token this is
+        /// The OAUTH ID used to register this user
         /// </summary>
-        public DbToken_TokenType token_type { get; set; }
+        public ObjectId oauth_application { get; set; }
 
         /// <summary>
-        /// The OAUTH client ID used to register this user, if is_oauth is set
+        /// Scope flags set on this token. uint.MaxValue will ALWAYS grant permissions no matter the scope and should only be given to official applications
+        /// IMPORTANT: This should only go up to 2^32, a uint32. However, MongoDB doesn't support this
         /// </summary>
-        public string oauth_client_id { get; set; }
-
-        /// <summary>
-        /// Scope flags set on this token
-        /// </summary>
-        public ulong token_scope { get; set; }
-
-        /// <summary>
-        /// "Preflight" token sent to the 3rd party's backend server and used to obtain a real token
-        /// </summary>
-        public string oauth_preflight { get; set; }
+        public ulong oauth_scope { get; set; }
 
         /// <summary>
         /// Deletes this in the database async
@@ -64,11 +56,5 @@ namespace LibDeltaSystem.Db.System
             var update = updateBuilder.Set<string>("oauth_preflight", null);
             await conn.system_tokens.UpdateOneAsync(filter, update);
         }
-    }
-
-    public enum DbToken_TokenType
-    {
-        UserSystem, //This is a standard Delta Web Map token
-        UserOauth //This was created from an oauth application
     }
 }

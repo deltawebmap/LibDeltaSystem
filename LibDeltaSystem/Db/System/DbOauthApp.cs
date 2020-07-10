@@ -40,5 +40,20 @@ namespace LibDeltaSystem.Db.System
         /// Secret code used
         /// </summary>
         public string client_secret { get; set; }
+
+        /// <summary>
+        /// The date this was created
+        /// </summary>
+        public DateTime creation_date { get; set; }
+
+        /// <summary>
+        /// Is this an official first-party web app
+        /// </summary>
+        public bool is_official { get; set; }
+
+        /// <summary>
+        /// Verified third-party app
+        /// </summary>
+        public bool is_verified { get; set; }
     }
 }

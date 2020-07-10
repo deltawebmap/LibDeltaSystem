@@ -13,7 +13,19 @@ namespace LibDeltaSystem.Db.System
         public AuthState state { get; set; }
         public ObjectId application_id { get; set; }
         public string nonce { get; set; }
+        public ulong scope { get; set; }
         public Dictionary<string, string> custom_data { get; set; }
+
+        /// <summary>
+        /// Deletes this in the database async
+        /// </summary>
+        /// <returns></returns>
+        public async Task DeleteAsync(DeltaConnection conn)
+        {
+            var filterBuilder = Builders<DbAuthenticationSession>.Filter;
+            var filter = filterBuilder.Eq("_id", _id);
+            await conn.system_auth_sessions.FindOneAndDeleteAsync(filter);
+        }
 
         public async Task UpdateAsync(DeltaConnection conn)
         {

@@ -171,20 +171,25 @@ namespace LibDeltaSystem.Db.System
         /// Generates a random token
         /// </summary>
         /// <returns></returns>
-        public async Task<string> MakeToken(DeltaConnection conn)
+        public async Task<string> MakeOauthToken(DeltaConnection conn, ObjectId oauthApp, uint oauthScope)
         {
             //Generate a unique string
-            string token = Tools.SecureStringTool.GenerateSecureString(64);
+            string token = Tools.SecureStringTool.GenerateSecureString(62);
             while(await conn.AuthenticateUserToken(token) != null)
-                token = Tools.SecureStringTool.GenerateSecureString(64);
+                token = Tools.SecureStringTool.GenerateSecureString(62);
+
+            //Add some information. This is for future use
+            token = "A." + token;
 
             //Now, create a token object
             DbToken t = new DbToken
             {
-                created_utc = DateTime.UtcNow.Ticks,
+                created_utc = DateTime.UtcNow,
                 token = token,
-                user_id = id,
-                _id = MongoDB.Bson.ObjectId.GenerateNewId()
+                user_id = _id,
+                _id = MongoDB.Bson.ObjectId.GenerateNewId(),
+                oauth_application = oauthApp,
+                oauth_scope = oauthScope
             };
 
             //Insert
@@ -192,42 +197,6 @@ namespace LibDeltaSystem.Db.System
 
             //Return string
             return token;
-        }
-
-        /// <summary>
-        /// Generates a random token
-        /// </summary>
-        /// <returns></returns>
-        public async Task<DbToken> MakeOAuthToken(DeltaConnection conn, DbOauthApp app, ulong scopes)
-        {
-            //Generate a unique string
-            string token = Tools.SecureStringTool.GenerateSecureString(64);
-            while (await conn.AuthenticateUserToken(token) != null)
-                token = Tools.SecureStringTool.GenerateSecureString(64);
-
-            //Generate a unique prefight token
-            string preflight = Tools.SecureStringTool.GenerateSecureString(64);
-            while (await conn.GetTokenByPreflightAsync(preflight) != null)
-                preflight = Tools.SecureStringTool.GenerateSecureString(64);
-
-            //Now, create a token object
-            DbToken t = new DbToken
-            {
-                created_utc = DateTime.UtcNow.Ticks,
-                token = token,
-                user_id = id,
-                _id = MongoDB.Bson.ObjectId.GenerateNewId(),
-                token_type = DbToken_TokenType.UserOauth,
-                oauth_client_id = app.client_id,
-                oauth_preflight = preflight,
-                token_scope = scopes
-            };
-
-            //Insert
-            await conn.system_tokens.InsertOneAsync(t);
-
-            //Return string
-            return t;
         }
 
         /// <summary>
