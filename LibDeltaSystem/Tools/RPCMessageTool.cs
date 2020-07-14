@@ -9,6 +9,8 @@ using LibDeltaSystem.RPC.Payloads.Entities;
 using LibDeltaSystem.Db.System;
 using LibDeltaSystem.Entities.CommonNet;
 using LibDeltaSystem.RPC.Payloads.User;
+using LibDeltaSystem.RPC;
+using LibDeltaSystem.CoreHub;
 
 namespace LibDeltaSystem.Tools
 {
@@ -17,6 +19,24 @@ namespace LibDeltaSystem.Tools
     /// </summary>
     public static class RPCMessageTool
     {
+        private static void SendRPCMsgToUserID(DeltaConnection conn, RPCOpcode opcode, RPCPayload payload, ObjectId user_id, ObjectId? target_server = null)
+        {
+            BaseClientCoreNetwork net = (BaseClientCoreNetwork)conn.network;
+            net.SendRPCEventToUserId(opcode, payload, user_id, target_server);
+        }
+
+        private static void SendRPCMsgToServer(DeltaConnection conn, RPCOpcode opcode, RPCPayload payload, ObjectId server_id)
+        {
+            BaseClientCoreNetwork net = (BaseClientCoreNetwork)conn.network;
+            net.SendRPCEventToServerId(opcode, payload, server_id);
+        }
+
+        private static void SendRPCMsgToServerTribe(DeltaConnection conn, RPCOpcode opcode, RPCPayload payload, ObjectId server_id, int tribe_id)
+        {
+            BaseClientCoreNetwork net = (BaseClientCoreNetwork)conn.network;
+            net.SendRPCEventToServerTribeId(opcode, payload, server_id, tribe_id);
+        }
+
         /// <summary>
         /// Triggers user groups to be refreshsed
         /// </summary>
@@ -25,11 +45,8 @@ namespace LibDeltaSystem.Tools
         /// <returns></returns>
         public static async Task SystemNotifyUserGroupReset(DeltaConnection conn, DbUser user)
         {
-            //Get RPC
-            var rpc = conn.GetRPC();
-
-            //Send
-            await rpc.SendNotifyUserGroupsUpdated(user._id);
+            BaseClientCoreNetwork net = (BaseClientCoreNetwork)conn.network;
+            net.RefreshUserIdGroups(user._id);
         }
         
         /// <summary>
@@ -52,11 +69,8 @@ namespace LibDeltaSystem.Tools
                 type = type
             };
 
-            //Get RPC
-            var rpc = conn.GetRPC();
-
             //Send
-            await rpc.SendRPCMsgToServerTribe(RPC.RPCOpcode.RPCServer20001ContentSync, payload, server_id, tribe_id);
+            SendRPCMsgToServerTribe(conn, RPC.RPCOpcode.RPCServer20001ContentSync, payload, server_id, tribe_id);
         }
 
         public static async Task SendPingToUser(DeltaConnection conn, ObjectId user_id, int nonce)
@@ -68,11 +82,8 @@ namespace LibDeltaSystem.Tools
                 nonce = nonce
             };
 
-            //Get RPC
-            var rpc = conn.GetRPC();
-
             //Send
-            await rpc.SendRPCMsgToUserID(RPC.RPCOpcode.RPCSystem10001Ping, payload, user_id);
+            SendRPCMsgToUserID(conn, RPC.RPCOpcode.RPCSystem10001Ping, payload, user_id);
         }
 
         public static async Task SendDbUpdatePartial(DeltaConnection conn, RPCSyncType type, ObjectId server_id, int tribe_id, string object_id, RPCPayload20002PartialUpdate.RPCPayload20002PartialUpdate_Update updates)
@@ -87,11 +98,8 @@ namespace LibDeltaSystem.Tools
                 updates = updates
             };
 
-            //Get RPC
-            var rpc = conn.GetRPC();
-
             //Send
-            await rpc.SendRPCMsgToServerTribe(RPC.RPCOpcode.RPCServer20002PartialUpdate, payload, server_id, tribe_id);
+            SendRPCMsgToServerTribe(conn, RPC.RPCOpcode.RPCServer20002PartialUpdate, payload, server_id, tribe_id);
         }
 
         public static async Task SendGuildUpdate(DeltaConnection conn, DbServer guild)
@@ -104,11 +112,8 @@ namespace LibDeltaSystem.Tools
                 time = DateTime.UtcNow
             };
 
-            //Get RPC
-            var rpc = conn.GetRPC();
-
             //Send
-            await rpc.SendRPCMsgToServer(RPC.RPCOpcode.RPCSystem10002GuildUpdate, payload, guild._id);
+            SendRPCMsgToServer(conn, RPC.RPCOpcode.RPCSystem10002GuildUpdate, payload, guild._id);
         }
         
         public static async Task SendGuildSetSecureMode(DeltaConnection conn, DbServer guild, bool secure)
@@ -119,11 +124,9 @@ namespace LibDeltaSystem.Tools
                 secure = secure
             };
 
-            //Get RPC
-            var rpc = conn.GetRPC();
-
+            
             //Send
-            await rpc.SendRPCMsgToServer(RPC.RPCOpcode.RPCServer20004SecureModeToggled, payload, guild._id);
+            SendRPCMsgToServer(conn, RPC.RPCOpcode.RPCServer20004SecureModeToggled, payload, guild._id);
         }
 
         public static async Task SendGuildPermissionChanged(DeltaConnection conn, DbServer guild)
@@ -134,11 +137,9 @@ namespace LibDeltaSystem.Tools
                 flags = guild.permission_flags
             };
 
-            //Get RPC
-            var rpc = conn.GetRPC();
-
+            
             //Send
-            await rpc.SendRPCMsgToServer(RPC.RPCOpcode.RPCServer20005GuildPermissionsChanged, payload, guild._id);
+            SendRPCMsgToServer(conn, RPC.RPCOpcode.RPCServer20005GuildPermissionsChanged, payload, guild._id);
         }
 
         public static async Task SendGuildAdminListUpdated(DeltaConnection conn, DbServer guild)
@@ -149,11 +150,9 @@ namespace LibDeltaSystem.Tools
                 admins = guild.admins
             };
 
-            //Get RPC
-            var rpc = conn.GetRPC();
-
+            
             //Send
-            await rpc.SendRPCMsgToServer(RPC.RPCOpcode.RPCServer20006GuildAdminListUpdated, payload, guild._id);
+            SendRPCMsgToServer(conn, RPC.RPCOpcode.RPCServer20006GuildAdminListUpdated, payload, guild._id);
         }
         
         public static async Task SendGuildUserRemoved(DeltaConnection conn, DbServer guild, DbUser user)
@@ -167,11 +166,9 @@ namespace LibDeltaSystem.Tools
                 user_id = user._id
             };
 
-            //Get RPC
-            var rpc = conn.GetRPC();
-
+            
             //Send
-            await rpc.SendRPCMsgToServer(RPC.RPCOpcode.RPCServer20007UserRemovedGuild, payload, guild._id);
+            SendRPCMsgToServer(conn, RPC.RPCOpcode.RPCServer20007UserRemovedGuild, payload, guild._id);
         }
 
         public static async Task SendGuildServerRemoved(DeltaConnection conn, DbServer guild)
@@ -182,11 +179,9 @@ namespace LibDeltaSystem.Tools
                 guild_id = guild._id
             };
 
-            //Get RPC
-            var rpc = conn.GetRPC();
-
+            
             //Send
-            await rpc.SendRPCMsgToServer(RPC.RPCOpcode.RPCPayload30004UserServerRemoved, payload, guild._id);
+            SendRPCMsgToServer(conn, RPC.RPCOpcode.RPCPayload30004UserServerRemoved, payload, guild._id);
         }
         
         public static async Task SendGuildPublicDetailsChanged(DeltaConnection conn, DbServer guild)
@@ -197,11 +192,9 @@ namespace LibDeltaSystem.Tools
                 guild = await NetGuild.GetGuild(conn, guild)
             };
 
-            //Get RPC
-            var rpc = conn.GetRPC();
-
+            
             //Send
-            await rpc.SendRPCMsgToServer(RPC.RPCOpcode.RPCServer20010GuildPublicDetailsChanged, payload, guild._id);
+            SendRPCMsgToServer(conn, RPC.RPCOpcode.RPCServer20010GuildPublicDetailsChanged, payload, guild._id);
         }
 
         public static async Task SendUserServerClaimed(DeltaConnection conn, DbUser claimer, DbServer guild)
@@ -212,11 +205,9 @@ namespace LibDeltaSystem.Tools
                 guild = await NetGuildUser.GetNetGuild(conn, guild, claimer)
             };
 
-            //Get RPC
-            var rpc = conn.GetRPC();
-
+            
             //Send
-            await rpc.SendRPCMsgToUserID(RPC.RPCOpcode.RPCPayload30001UserServerClaimed, payload, claimer);
+            SendRPCMsgToUserID(conn, RPC.RPCOpcode.RPCPayload30001UserServerClaimed, payload, claimer._id);
         }
 
         public static async Task SendUserServerJoined(DeltaConnection conn, DbUser claimer, DbServer guild)
@@ -228,11 +219,9 @@ namespace LibDeltaSystem.Tools
                 cluster = NetCluster.GetCluster(await guild.GetClusterAsync(conn))
             };
 
-            //Get RPC
-            var rpc = conn.GetRPC();
-
+            
             //Send
-            await rpc.SendRPCMsgToUserID(RPC.RPCOpcode.RPCPayload30002UserServerJoined, payload, claimer);
+            SendRPCMsgToUserID(conn, RPC.RPCOpcode.RPCPayload30002UserServerJoined, payload, claimer._id);
         }
 
         public static async Task SendUserServerPermissionsChanged(DeltaConnection conn, ObjectId user, DbServer guild)
@@ -244,11 +233,9 @@ namespace LibDeltaSystem.Tools
                 is_admin = guild.admins.Contains(user)
             };
 
-            //Get RPC
-            var rpc = conn.GetRPC();
-
+            
             //Send
-            await rpc.SendRPCMsgToUserID(RPC.RPCOpcode.RPCPayload30003UserServerPermissionsChanged, payload, user, guild._id);
+            SendRPCMsgToUserID(conn, RPC.RPCOpcode.RPCPayload30003UserServerPermissionsChanged, payload, user, guild._id);
         }
 
         public static async Task SendUserServerRemoved(DeltaConnection conn, ObjectId user, DbServer guild)
@@ -259,11 +246,9 @@ namespace LibDeltaSystem.Tools
                 guild_id = guild._id
             };
 
-            //Get RPC
-            var rpc = conn.GetRPC();
-
+            
             //Send
-            await rpc.SendRPCMsgToUserID(RPC.RPCOpcode.RPCPayload30004UserServerRemoved, payload, user, guild._id);
+            SendRPCMsgToUserID(conn, RPC.RPCOpcode.RPCPayload30004UserServerRemoved, payload, user, guild._id);
         }
 
         public static async Task SendUserArkRpcAck(DeltaConnection conn, ObjectId user, ObjectId guild_id, ObjectId rpc_id, Dictionary<string, string> custom_data)
@@ -275,11 +260,9 @@ namespace LibDeltaSystem.Tools
                 custom_data = custom_data
             };
 
-            //Get RPC
-            var rpc = conn.GetRPC();
-
+            
             //Send
-            await rpc.SendRPCMsgToUserID(RPC.RPCOpcode.RPCServer20008ArkRpcAck, payload, user, guild_id);
+            SendRPCMsgToUserID(conn, RPC.RPCOpcode.RPCServer20008ArkRpcAck, payload, user, guild_id);
         }
     }
 }

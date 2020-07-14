@@ -37,7 +37,6 @@ namespace LibDeltaSystem.WebFramework.WebSockets.Groups
             }
 
             //Authenticate this token
-            EndDebugCheckpoint("Authenticate Token");
             token = await conn.GetTokenByTokenAsync(tokenString);
             if (token == null)
             {
@@ -46,7 +45,6 @@ namespace LibDeltaSystem.WebFramework.WebSockets.Groups
             }
 
             //Get user
-            EndDebugCheckpoint("Authenticate User w/ Token");
             user = await conn.GetUserByIdAsync(token.user_id);
             if (user == null)
             {

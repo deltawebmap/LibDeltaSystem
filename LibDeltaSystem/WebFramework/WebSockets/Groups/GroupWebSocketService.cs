@@ -64,5 +64,22 @@ namespace LibDeltaSystem.WebFramework.WebSockets.Groups
             //Remove ourselves from all groups
             holder.RemoveClient(this);
         }
+
+        public async Task RefreshGroups()
+        {
+            //Now, authenticate our query
+            List<WebSocketGroupQuery> queries = await AuthenticateGroupsQuery();
+
+            //Remove ourselves from all groups
+            holder.RemoveClient(this);
+
+            //Locate groups for us to use
+            groups = new List<WebSocketGroup>();
+            foreach (var q in queries)
+                holder.AddClient(this, q);
+
+            //Log
+            conn.Log("RPCConnection-HandleCommandAuth", $"[SESSION {_request_id}] Refreshed groups. {queries.Count} queries, {groups.Count} groups added.", DeltaLogLevel.Debug);
+        }
     }
 }

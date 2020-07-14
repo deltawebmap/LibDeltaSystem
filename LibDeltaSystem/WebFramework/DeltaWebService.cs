@@ -20,11 +20,8 @@ namespace LibDeltaSystem.WebFramework
         public string method;
 
         private DateTime start;
-        private DateTime checkpoint;
-        private int checkpoint_index;
-        private string checkpoint_name;
 
-        private int _request_id; //Random request ID for logging
+        public int _request_id; //Random request ID for logging
 
         public DeltaWebService(DeltaConnection conn, HttpContext e)
         {
@@ -33,9 +30,6 @@ namespace LibDeltaSystem.WebFramework
             this.method = e.Request.Method.ToUpper();
             _request_id = new Random().Next();
             start = DateTime.UtcNow;
-            checkpoint = start;
-            checkpoint_index = 0;
-            checkpoint_name = "Default";
         }
 
         /// <summary>
@@ -56,6 +50,8 @@ namespace LibDeltaSystem.WebFramework
         /// <returns></returns>
         public abstract Task OnRequest();
 
+        private bool stringHeadersWritten = false;
+
         /// <summary>
         /// Writes a string to the output stream
         /// </summary>
@@ -65,12 +61,14 @@ namespace LibDeltaSystem.WebFramework
         /// <returns></returns>
         public async Task WriteString(string data, string type, int code = 200)
         {
-            EndDebugCheckpoint("Output Writing");
-            var response = e.Response;
-            response.StatusCode = code;
-            response.ContentType = type;
             var bytes = Encoding.UTF8.GetBytes(data);
-            response.ContentLength = bytes.Length;
+            var response = e.Response;
+            if(!stringHeadersWritten)
+            {
+                response.StatusCode = code;
+                response.ContentType = type;
+                stringHeadersWritten = true;
+            }
             await response.Body.WriteAsync(bytes, 0, bytes.Length);
         }
 
@@ -140,27 +138,9 @@ namespace LibDeltaSystem.WebFramework
             return request;
         }
 
-        /// <summary>
-        /// Ends the laest checkpoint and logs data if debug mode is on
-        /// </summary>
-        public void EndDebugCheckpoint(string name)
-        {
-            if (!conn.debug_mode)
-                return;
-            e.Response.Headers.Add("X-DeltaDebugCheckpoint-" + checkpoint_index, $"{checkpoint_name} / {Math.Round((DateTime.UtcNow - checkpoint).TotalMilliseconds)}ms / {Math.Round((DateTime.UtcNow - start).TotalMilliseconds)}ms");
-            checkpoint_index++;
-            checkpoint = DateTime.UtcNow;
-            checkpoint_name = name;
-        }
-
         public void Log(string topic, string msg, ConsoleColor color = ConsoleColor.White)
         {
-            if (conn.debug_mode)
-            {
-                Console.ForegroundColor = color;
-                Console.WriteLine($"[DeltaWebService@{_request_id}: {topic}] {msg}");
-                Console.ForegroundColor = ConsoleColor.White;
-            }
+            conn.Log("DeltaWebService-" + topic, msg, DeltaLogLevel.Low);
         }
 
         public DeltaCommonHTTPMethod GetMethod()
@@ -176,6 +156,17 @@ namespace LibDeltaSystem.WebFramework
             if (!e.Request.Query.ContainsKey(name))
                 return false;
             return int.TryParse(e.Request.Query[name], out value);
+        }
+
+        public Task AwaitCancel()
+        {
+            //Little bit janky...
+            var promise = new TaskCompletionSource<bool>();
+            e.RequestAborted.Register(() =>
+            {
+                promise.SetResult(true);
+            });
+            return promise.Task;
         }
     }
 }

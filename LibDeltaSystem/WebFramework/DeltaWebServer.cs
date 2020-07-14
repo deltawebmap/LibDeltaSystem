@@ -22,12 +22,12 @@ namespace LibDeltaSystem.WebFramework
             this.port = port;
             this.services = new List<DeltaWebServiceDefinition>();
             this.start = DateTime.UtcNow;
+            conn.AttachWebServer(this);
         }
 
         public void Log(string topic, string msg)
         {
-            if (conn.debug_mode)
-                Console.WriteLine($"[DeltaWebServer: {topic}] {msg}");
+            conn.Log(topic, msg, DeltaLogLevel.Debug);
         }
 
         public Task RunAsync()
@@ -56,11 +56,14 @@ namespace LibDeltaSystem.WebFramework
         public DeltaConnection conn;
         public int port;
         public DateTime start;
+
+        public long stat_requests_handled;
         
         public async Task OnHTTPRequest(HttpContext e)
         {
             //Do CORS stuff
-            e.Response.Headers.Add("Server", conn.system_name + $" / LibDeltaSystem v{DeltaConnection.LIB_VERSION_MAJOR}.{DeltaConnection.LIB_VERSION_MINOR} / Kestrel");
+            e.Response.Headers.Add("X-Delta-Server-ID", conn.network.me.id.ToString());
+            e.Response.Headers.Add("X-Delta-Server-Type", conn.network.me.type.ToString());
             e.Response.Headers.Add("Access-Control-Allow-Headers", "Authorization");
             e.Response.Headers.Add("Access-Control-Allow-Origin", "*");
             e.Response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, OPTIONS, DELETE, PUT, PATCH");
@@ -71,10 +74,11 @@ namespace LibDeltaSystem.WebFramework
             }
 
             //Log
-            Log("REQUEST", e.Request.Method.ToUpper() + " TO " + e.Request.Path);
+            conn.Log("DeltaWebServer-OnHTTPRequest", $"Got HTTP {e.Request.Method.ToUpper()} -> {e.Request.Path + e.Request.QueryString}", DeltaLogLevel.Debug);
+            stat_requests_handled++;
 
             //Check if this is a status request
-            if(e.Request.Path == "/status.json")
+            if (e.Request.Path == "/status.json")
             {
                 await WriteStringToBody(e, JsonConvert.SerializeObject(GetStatus()), "application/json");
                 return;

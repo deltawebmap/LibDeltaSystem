@@ -48,5 +48,21 @@ namespace LibDeltaSystem.CoreHub.CoreNetwork.CoreNetworkServerList
             }
             return null;
         }
+
+        public override List<CoreNetworkServer> FindAllServersOfType(CoreNetworkServerType type)
+        {
+            List<CoreNetworkServer> servers = new List<CoreNetworkServer>();
+            foreach (var s in this.servers)
+            {
+                if (s.type == type)
+                    servers.Add(s);
+            }
+            return servers;
+        }
+
+        public override List<CoreNetworkServer> GetAllServers()
+        {
+            return servers;
+        }
     }
 }

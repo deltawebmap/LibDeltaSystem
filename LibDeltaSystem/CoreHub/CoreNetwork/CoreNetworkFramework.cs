@@ -8,37 +8,56 @@ using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace LibDeltaSystem.CoreHub.CoreNetwork
 {
     /// <summary>
-    /// Handles core networking, acts as a server and a client
+    /// Handles core networking, acts as a server and a client. Each kind of server should create their own version of this class.
     /// </summary>
     public abstract class CoreNetworkFramework
     {
         private UdpClient listener;
-        private CoreNetworkServer me;
-        private DeltaConnection delta;
-        private ICoreNetworkServerList list;
+        public CoreNetworkServer me;
+        public DeltaConnection delta;
+        public ICoreNetworkServerList list;
         private List<CoreNetworkOutgoingMessage> outgoing;
         private Thread outgoingThread;
         private uint outgoingIndex; //The outgoing message ID
         private List<ulong> previousReceivedIds; //Holds IDs that we've already seen. IDs matching will either be dropped, or we'll resend the ack for them
 
-        public CoreNetworkFramework(DeltaConnection delta, CoreNetworkServer me, ICoreNetworkServerList list)
+        public int stat_outgoingQueueSize { get { return outgoing.Count; } }
+        public int stat_previousIdCount { get { return previousReceivedIds.Count; } }
+        public int stat_messagesSent { get; private set; }
+        public int stat_messagesReceived { get; private set; }
+        public int stat_messagesReceivedDuplicate { get; private set; }
+        public int stat_messagesResent { get; private set; }
+        public int stat_messagesAcked { get; private set; }
+        public int stat_messagesAuthFailed { get; private set; }
+
+        public CoreNetworkFramework()
+        {
+            
+        }
+
+        public void Init(DeltaConnection delta, ushort my_server_id, ICoreNetworkServerList list)
         {
             //Set
-            this.me = me;
             this.list = list;
             this.delta = delta;
             previousReceivedIds = new List<ulong>();
             outgoing = new List<CoreNetworkOutgoingMessage>();
             outgoingIndex = (uint)(new Random().Next(int.MinValue, int.MaxValue));
 
+            //Find my server
+            me = list.GetServerById(my_server_id);
+            if (me == null)
+                throw new Exception("Could not find my server ID in the server list.");
+
             //Verify
             if (me.id == 0)
                 throw new Exception("Policy FORBIDS server IDs to be 0. This is an invalid server entry.");
-            
+
             //Create listener
             listener = new UdpClient(me.port);
             listener.BeginReceive(_ListenerReceive, null);
@@ -119,6 +138,26 @@ namespace LibDeltaSystem.CoreHub.CoreNetwork
             return result._result;
         }
 
+        /// <summary>
+        /// Sends a message and accepts a response.
+        /// </summary>
+        /// <param name="server"></param>
+        /// <param name="opcode"></param>
+        /// <param name="data"></param>
+        public Task<byte[]> SendMessageGetResponse(CoreNetworkServer server, CoreNetworkOpcode opcode, byte[] data)
+        {
+            var promise = new TaskCompletionSource<byte[]>();
+            BeginSendMessageGetResponse(server, opcode, data, _AsyncSendMessageGetResponse, promise);
+            return promise.Task;
+        }
+
+        private void _AsyncSendMessageGetResponse(IAsyncResult ar)
+        {
+            var promise = (TaskCompletionSource<byte[]>)ar.AsyncState;
+            byte[] data = EndSendMessageGetResponse(ar);
+            promise.SetResult(data);
+        }
+
         private void _QueueMessage(CoreNetworkServer server, CoreNetworkOpcode opcode, byte[] data, ulong ackMessageId = 0, AsyncCallback callback = null, object asyncObject = null)
         {
             //Create and queue this outgoing message
@@ -165,6 +204,13 @@ namespace LibDeltaSystem.CoreHub.CoreNetwork
             //Log
             delta.Log("CoreHub-CoreNetworkFramework", $"SENT message {msg.id} with opcode {msg.opcode.ToString()} ({(int)msg.opcode}) to server {msg.server.id} (type {msg.server.type.ToString()}) with payload size {msg.payload.Length} bytes", DeltaLogLevel.Debug);
 
+            //Set stats
+            msg.sendAttempts++;
+            if (msg.sendAttempts == 1)
+                stat_messagesSent++;
+            else
+                stat_messagesResent++;
+
             //Update
             msg.lastSent = DateTime.UtcNow;
         }
@@ -173,7 +219,16 @@ namespace LibDeltaSystem.CoreHub.CoreNetwork
         {
             //Get payload
             IPEndPoint source = null;
-            byte[] data = listener.EndReceive(ar, ref source);
+            byte[] data;
+            try
+            {
+                data = listener.EndReceive(ar, ref source);
+            } catch (Exception ex)
+            {
+                delta.Log("CoreHub-_ListenerReceive", $"CONNECTION ERROR trying to receive.", DeltaLogLevel.Medium);
+                listener.BeginReceive(_ListenerReceive, null);
+                return;
+            }
 
             //We're going to decode the header. It follows this format:
             //SIZE  TYPE        NAME
@@ -190,6 +245,7 @@ namespace LibDeltaSystem.CoreHub.CoreNetwork
             {
                 _LogConnectionSecurityError(source, "Data length not long enough to contain header.");
                 listener.BeginReceive(_ListenerReceive, null);
+                stat_messagesAuthFailed++;
                 return;
             }
 
@@ -208,6 +264,7 @@ namespace LibDeltaSystem.CoreHub.CoreNetwork
             {
                 _LogConnectionSecurityError(source, "Data length not long enough to contain payload.");
                 listener.BeginReceive(_ListenerReceive, null);
+                stat_messagesAuthFailed++;
                 return;
             }
 
@@ -217,6 +274,7 @@ namespace LibDeltaSystem.CoreHub.CoreNetwork
             {
                 _LogConnectionSecurityError(source, "Requested server ID was not a valid server.");
                 listener.BeginReceive(_ListenerReceive, null);
+                stat_messagesAuthFailed++;
                 return;
             }
 
@@ -226,6 +284,7 @@ namespace LibDeltaSystem.CoreHub.CoreNetwork
             {
                 _LogConnectionSecurityError(source, "Challenge HMAC did not match the HMAC sent. THIS IS AN ENTRY ATTEMPT!");
                 listener.BeginReceive(_ListenerReceive, null);
+                stat_messagesAuthFailed++;
                 return;
             }
 
@@ -234,10 +293,13 @@ namespace LibDeltaSystem.CoreHub.CoreNetwork
 
             //We've now verified that the packet is correct!
             delta.Log("CoreHub-CoreNetworkFramework", $"GOT message {requestId} of opcode {opcode.ToString()} ({(int)opcode}) from server {server.id} (type {server.type.ToString()}) with payload {payload.Length} bytes.", DeltaLogLevel.Debug);
+            stat_messagesReceived++;
 
             //Check if we've already gotten this message before
-            if(previousReceivedIds.Contains(globalMessageId))
+            if (previousReceivedIds.Contains(globalMessageId))
             {
+                stat_messagesReceivedDuplicate++;
+
                 //Search for this ID
                 CoreNetworkOutgoingMessage msg = null;
                 lock(outgoing)
@@ -382,8 +444,46 @@ namespace LibDeltaSystem.CoreHub.CoreNetwork
         {
             if (opcode == CoreNetworkOpcode.MESSAGE_PING)
                 return payload;
+            else if (opcode == CoreNetworkOpcode.MESSAGE_STATS)
+                return _InternalHandleStats(server);
             else
                 return OnMessage(server, opcode, payload);
+        }
+
+        private byte[] _InternalHandleStats(CoreNetworkServer server)
+        {
+            //Create stats packet with this data:
+            //Len   Type    Name
+            //1     Byte    LibDelta version major
+            //1     Byte    LibDelta version minor
+            //1     Byte    Application version major
+            //1     Byte    Application version minor
+            //2     UShort  Server ID
+            //1     Byte    Server Type
+            //1     Byte    Status (should always be 0x00)
+            //4     UInt32  Uptime Seconds
+            //8     Int64   DateTime ticks
+            //1     Byte    Operating System
+            //1     Byte    Machine Name Length
+            //64    Char[]  Machine Name 
+            //TOTAL LENGTH: 86
+
+            byte[] machineName = Encoding.UTF8.GetBytes(System.Environment.MachineName);
+
+            byte[] payload = new byte[86];
+            payload[0] = DeltaConnection.LIB_VERSION_MAJOR;
+            payload[1] = DeltaConnection.LIB_VERSION_MINOR;
+            payload[2] = delta.system_version_major;
+            payload[3] = delta.system_version_minor;
+            Tools.BinaryTool.WriteUInt16(payload, 4, delta.server_id);
+            payload[6] = (byte)me.type;
+            payload[7] = 0x00;
+            Tools.BinaryTool.WriteUInt32(payload, 8, (uint)(DateTime.UtcNow - delta.start_time).TotalSeconds);
+            Tools.BinaryTool.WriteInt64(payload, 12, DateTime.UtcNow.Ticks);
+            payload[20] = (byte)System.Environment.OSVersion.Platform;
+            payload[21] = (byte)Math.Min(64, machineName.Length);
+            Array.Copy(machineName, 0, payload, 22, payload[21]);
+            return payload;
         }
 
         public abstract byte[] OnMessage(CoreNetworkServer server, CoreNetworkOpcode opcode, byte[] payload);
@@ -397,6 +497,7 @@ namespace LibDeltaSystem.CoreHub.CoreNetwork
 
             //Log
             delta.Log("CoreHub-CoreNetworkFramework", $"Message ({ackMessageId}) ACK'd with status {status}", DeltaLogLevel.Debug);
+            stat_messagesAcked++;
 
             //Find and remove the outgoing message
             CoreNetworkOutgoingMessage msg = null;
@@ -419,7 +520,13 @@ namespace LibDeltaSystem.CoreHub.CoreNetwork
             }
 
             //Run callback
-            msg.callback?.Invoke(new CoreNetworkAsyncResult(status, response, msg.asyncState));
+            try
+            {
+                msg.callback?.Invoke(new CoreNetworkAsyncResult(status, response, msg.asyncState));
+            } catch (Exception ex)
+            {
+                delta.Log("CoreHub-CoreNetworkFramework", $"Exception occurred attempting to handle ack in user's code: {ex.Message} {ex.StackTrace}", DeltaLogLevel.High);
+            }
         }
     }
 }

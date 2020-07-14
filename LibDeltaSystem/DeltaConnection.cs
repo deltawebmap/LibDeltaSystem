@@ -1,4 +1,7 @@
-﻿using LibDeltaSystem.Db.ArkEntries;
+﻿using LibDeltaSystem.CoreHub;
+using LibDeltaSystem.CoreHub.CoreNetwork;
+using LibDeltaSystem.CoreHub.CoreNetwork.CoreNetworkServerList;
+using LibDeltaSystem.Db.ArkEntries;
 using LibDeltaSystem.Db.Content;
 using LibDeltaSystem.Db.System;
 using LibDeltaSystem.Db.System.Analytics;
@@ -9,6 +12,7 @@ using LibDeltaSystem.Entities.ArkEntries.Dinosaur;
 using LibDeltaSystem.Entities.DynamicTiles;
 using LibDeltaSystem.Entities.PrivateNet;
 using LibDeltaSystem.Tools;
+using LibDeltaSystem.WebFramework;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Newtonsoft.Json;
@@ -23,8 +27,8 @@ namespace LibDeltaSystem
 {
     public class DeltaConnection
     {
-        public const int LIB_VERSION_MAJOR = 0;
-        public const int LIB_VERSION_MINOR = 1;
+        public const byte LIB_VERSION_MAJOR = 0;
+        public const byte LIB_VERSION_MINOR = 1;
 
         public const string SYSTEM_USER_TEST_STEAM = "76561198300124500";
         public const string SYSTEM_USER_TEST_DELTA = "5e44331adc8304aec01ec965";
@@ -74,19 +78,29 @@ namespace LibDeltaSystem
 
         public HttpClient http;
 
-        public string system_name;
-        public int system_version_minor;
-        public int system_version_major;
+        public ushort server_id;
+        public byte system_version_minor;
+        public byte system_version_major;
+        public BaseClientCoreNetwork network;
+        public DateTime start_time;
+        public Random rand;
+        public DeltaWebServer web_server;
+
+        [Obsolete("This method is simply for backwards compatibilty. Please do not identify servers by their string name.")]
+        public string system_name { get { return network.me.id.ToString() + "~" + network.me.type.ToString(); } }
 
         public bool debug_mode { get { return config.debug_mode; } }
 
-        public DeltaConnection(string pathname, string system_name, int system_version_major, int system_version_minor)
+        public DeltaConnection(string pathname, ushort server_id, byte system_version_major, byte system_version_minor, BaseClientCoreNetwork network)
         {
             config = JsonConvert.DeserializeObject<DeltaConnectionConfig>(File.ReadAllText(pathname));
             this.http = new HttpClient();
             this.system_version_major = system_version_major;
             this.system_version_minor = system_version_minor;
-            this.system_name = system_name;
+            this.server_id = server_id;
+            this.network = network;
+            this.start_time = DateTime.UtcNow;
+            this.rand = new Random();
         }
 
         /// <summary>
@@ -139,18 +153,10 @@ namespace LibDeltaSystem
             arkentries_items = charlie_database.GetCollection<DbArkEntry<ItemEntry>>("item_entries");
             arkentries_maps = charlie_database.GetCollection<DbArkMapEntry>("maps");
 
-            //Create RPC
-            if(enable_rpc)
-                _rpc = new DeltaRPCConnection(this);
-        }
-
-        public DeltaConnection(DeltaConnectionConfig config, string system_name, int system_version_major, int system_version_minor)
-        {
-            this.config = config;
-            this.http = new HttpClient();
-            this.system_version_major = system_version_major;
-            this.system_version_minor = system_version_minor;
-            this.system_name = system_name;
+            //Set up the core network
+            var serverList = new CoreNetworkServerListDatabase();
+            await serverList.Init(this, config.env);
+            network.Init(this, server_id, serverList);
         }
 
         public void Log(string topic, string message, DeltaLogLevel level)
@@ -171,6 +177,14 @@ namespace LibDeltaSystem
             //Reset
             Console.ForegroundColor = ConsoleColor.White;
             Console.BackgroundColor = ConsoleColor.Black;
+
+            //Remote log
+            network.RemoteLog(topic, message, level);
+        }
+
+        public void AttachWebServer(DeltaWebServer server)
+        {
+            this.web_server = server;
         }
 
         /// <summary>
@@ -323,20 +337,6 @@ namespace LibDeltaSystem
             foreach (var r in resultsList)
                 output.Add(r.internalName, r.data);
             return output;
-        }
-
-        /// <summary>
-        /// Only set after GetRPC is called
-        /// </summary>
-        private DeltaRPCConnection _rpc;
-
-        /// <summary>
-        /// Gets an RPC connection. This can be used to get the RPC object anytime
-        /// </summary>
-        /// <returns></returns>
-        public DeltaRPCConnection GetRPC()
-        {
-            return _rpc;
         }
         
         /// <summary>

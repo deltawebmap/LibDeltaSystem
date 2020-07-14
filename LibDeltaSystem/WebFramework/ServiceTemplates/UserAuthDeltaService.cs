@@ -34,7 +34,6 @@ namespace LibDeltaSystem.WebFramework.ServiceTemplates
             }
 
             //Authenticate this token
-            EndDebugCheckpoint("Authenticate Token");
             token = await conn.GetTokenByTokenAsync(tokenString);
             if (token == null)
             {
@@ -43,7 +42,6 @@ namespace LibDeltaSystem.WebFramework.ServiceTemplates
             }
 
             //Get user
-            EndDebugCheckpoint("Authenticate User w/ Token");
             user = await conn.GetUserByIdAsync(token.user_id);
             if (user == null)
             {

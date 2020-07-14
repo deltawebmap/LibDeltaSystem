@@ -7,7 +7,7 @@ namespace LibDeltaSystem.Tools
 {
     public static class BinaryTool
     {
-        public static void WriteInt64(byte[] buf, int pos, ulong data)
+        public static void WriteInt64(byte[] buf, int pos, long data)
         {
             byte[] d = BitConverter.GetBytes(data);
             PrivateWriteBytes(d, buf, pos);

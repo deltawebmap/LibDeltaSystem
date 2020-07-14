@@ -16,6 +16,7 @@ namespace LibDeltaSystem.CoreHub.CoreNetwork
         public bool ackSendRequired = true; //Set to true initially, else manually
         public ulong ackMessageId = 0; //IF this is an ack, this will hold the global ID of the message to be ack'd. This is used for resending ACKs
         public ulong globalId { get { return ((ulong)server.id << 32) | id; } } //An ID unique to all servers
+        public int sendAttempts;
 
         public bool CanSend()
         {
