@@ -83,6 +83,7 @@ namespace LibDeltaSystem
         public byte system_version_minor;
         public byte system_version_major;
         public BaseClientCoreNetwork network;
+        public DbSystemServer me;
         public DateTime start_time;
         public Random rand;
         public DeltaWebServer web_server;
@@ -105,10 +106,41 @@ namespace LibDeltaSystem
         }
 
         /// <summary>
+        /// Creates a managed app. StartupArgs are from the args used to start the application. Works with args passed by this bring run by a proccess manager. Connects too
+        /// </summary>
+        /// <param name="startupArgs"></param>
+        /// <param name="system_version_major"></param>
+        /// <param name="system_version_minor"></param>
+        /// <param name="network"></param>
+        /// <returns></returns>
+        public static DeltaConnection InitDeltaManagedApp(string[] startupArgs, byte system_version_major, byte system_version_minor, BaseClientCoreNetwork network)
+        {
+            //Write
+            Console.WriteLine($"[LibDeltaSystem] Starting Delta managed app on version {system_version_major}.{system_version_minor} (lib version {LIB_VERSION_MAJOR}.{LIB_VERSION_MINOR})");
+            
+            //Validate
+            if (startupArgs.Length != 2)
+                throw new Exception("The startup args are not valid. This program is supposed to be run from a Delta Process Manager.");
+
+            //Create
+            var d = new DeltaConnection(startupArgs[0], ushort.Parse(startupArgs[1]), system_version_major, system_version_minor, network);
+
+            //Connect
+            d.Connect().GetAwaiter().GetResult();
+
+            return d;
+        }
+
+        public int GetUserPort(int index)
+        {
+            return me.ports[index];
+        }
+
+        /// <summary>
         /// Connects and sets up databases
         /// </summary>
         /// <returns></returns>
-        public async Task Connect(bool enable_rpc = true)
+        public async Task Connect()
         {
             //Set up database
             content_client = new MongoClient(
@@ -159,6 +191,12 @@ namespace LibDeltaSystem
             var serverList = new CoreNetworkServerListDatabase();
             await serverList.Init(this, config.env);
             network.Init(this, server_id, serverList);
+
+            //Set me
+            if (serverList.me == null)
+                throw new Exception("Could not find my own server ID in the server list!");
+            else
+                me = serverList.me;
         }
 
         public void Log(string topic, string message, DeltaLogLevel level)

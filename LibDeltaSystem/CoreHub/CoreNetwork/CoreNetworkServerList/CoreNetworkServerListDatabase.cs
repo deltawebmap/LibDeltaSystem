@@ -11,9 +11,10 @@ namespace LibDeltaSystem.CoreHub.CoreNetwork.CoreNetworkServerList
     public class CoreNetworkServerListDatabase : ICoreNetworkServerList
     {
         private List<CoreNetworkServer> servers;
-
         private DeltaConnection conn;
         private string enviornment;
+
+        public DbSystemServer me;
 
         public CoreNetworkServerListDatabase()
         {
@@ -32,7 +33,11 @@ namespace LibDeltaSystem.CoreHub.CoreNetwork.CoreNetworkServerList
             {
                 servers.Clear();
                 foreach (var s in serverData)
+                {
                     AddServer(s);
+                    if (s.server_id == conn.server_id)
+                        me = s;
+                }
             }
         }
         
