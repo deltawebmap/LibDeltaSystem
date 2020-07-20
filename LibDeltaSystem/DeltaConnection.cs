@@ -69,6 +69,7 @@ namespace LibDeltaSystem
         public IMongoCollection<DbBetaKey> system_beta_keys;
         public IMongoCollection<DbAuthenticationSession> system_auth_sessions;
         public IMongoCollection<DbSystemServer> system_delta_servers;
+        public IMongoCollection<DbSystemAdminUser> system_delta_admin_users;
 
         public IMongoCollection<DbArkEntry<DinosaurEntry>> arkentries_dinos;
         public IMongoCollection<DbArkEntry<ItemEntry>> arkentries_items;
@@ -147,6 +148,7 @@ namespace LibDeltaSystem
             system_beta_keys = system_database.GetCollection<DbBetaKey>("beta_keys");
             system_auth_sessions = system_database.GetCollection<DbAuthenticationSession>("auth_sessions");
             system_delta_servers = system_database.GetCollection<DbSystemServer>("delta_servers");
+            system_delta_admin_users = system_database.GetCollection<DbSystemAdminUser>("delta_admin_users");
 
             charlie_database = content_client.GetDatabase("delta-" + config.env + "-charlie");
             arkentries_dinos = charlie_database.GetCollection<DbArkEntry<DinosaurEntry>>("dino_entries");
