@@ -11,5 +11,6 @@ namespace LibDeltaSystem.CoreHub.CoreNetwork.CoreNetworkServerList
         public abstract List<CoreNetworkServer> FindAllServersOfType(CoreNetworkServerType type);
 
         public abstract List<CoreNetworkServer> GetAllServers();
+        public abstract void RefreshRequested();
     }
 }

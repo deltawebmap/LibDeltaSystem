@@ -15,5 +15,7 @@ namespace LibDeltaSystem.CoreHub.CoreNetwork
         public CoreNetworkServerType type;
         public IPAddress address;
         public int port;
+        public ushort manager_server_id; //The server that manages this server. May be 0 if there is none
+
     }
 }

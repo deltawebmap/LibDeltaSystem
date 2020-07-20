@@ -60,7 +60,7 @@ namespace LibDeltaSystem.CoreHub.CoreNetwork
 
             //Create listener
             listener = new UdpClient(me.port);
-            listener.BeginReceive(_ListenerReceive, null);
+            _BeginListening();
 
             //Start sender thread
             outgoingThread = new Thread(() =>
@@ -226,7 +226,7 @@ namespace LibDeltaSystem.CoreHub.CoreNetwork
             } catch (Exception ex)
             {
                 delta.Log("CoreHub-_ListenerReceive", $"CONNECTION ERROR trying to receive.", DeltaLogLevel.Medium);
-                listener.BeginReceive(_ListenerReceive, null);
+                _BeginListening();
                 return;
             }
 
@@ -244,7 +244,7 @@ namespace LibDeltaSystem.CoreHub.CoreNetwork
             if (data.Length < 32 + 4 + 2 + 2 + 2 + 2)
             {
                 _LogConnectionSecurityError(source, "Data length not long enough to contain header.");
-                listener.BeginReceive(_ListenerReceive, null);
+                _BeginListening();
                 stat_messagesAuthFailed++;
                 return;
             }
@@ -263,7 +263,7 @@ namespace LibDeltaSystem.CoreHub.CoreNetwork
             if (data.Length < 32 + 4 + 2 + 2 + 2 + 2 + payloadLength)
             {
                 _LogConnectionSecurityError(source, "Data length not long enough to contain payload.");
-                listener.BeginReceive(_ListenerReceive, null);
+                _BeginListening();
                 stat_messagesAuthFailed++;
                 return;
             }
@@ -273,7 +273,7 @@ namespace LibDeltaSystem.CoreHub.CoreNetwork
             if (server == null)
             {
                 _LogConnectionSecurityError(source, "Requested server ID was not a valid server.");
-                listener.BeginReceive(_ListenerReceive, null);
+                _BeginListening();
                 stat_messagesAuthFailed++;
                 return;
             }
@@ -283,7 +283,7 @@ namespace LibDeltaSystem.CoreHub.CoreNetwork
             if(!Tools.BinaryTool.CompareBytes(hmac, challengeHmac))
             {
                 _LogConnectionSecurityError(source, "Challenge HMAC did not match the HMAC sent. THIS IS AN ENTRY ATTEMPT!");
-                listener.BeginReceive(_ListenerReceive, null);
+                _BeginListening();
                 stat_messagesAuthFailed++;
                 return;
             }
@@ -322,7 +322,7 @@ namespace LibDeltaSystem.CoreHub.CoreNetwork
                 }
 
                 //Stop
-                listener.BeginReceive(_ListenerReceive, null);
+                _BeginListening();
                 return;
             } else
             {
@@ -361,7 +361,20 @@ namespace LibDeltaSystem.CoreHub.CoreNetwork
             }
 
             //Listen
-            listener.BeginReceive(_ListenerReceive, null);
+            _BeginListening();
+        }
+
+        private void _BeginListening()
+        {
+            try
+            {
+                listener.BeginReceive(_ListenerReceive, null);
+            } catch (Exception ex)
+            {
+                delta.Log("CoreHub-_BeginListening", $"BeginReceive threw an exception.", DeltaLogLevel.Medium);
+                Thread.Sleep(50);
+                _BeginListening();
+            }
         }
 
         private void _LogConnectionSecurityError(IPEndPoint endpoint, string reason)
@@ -440,14 +453,31 @@ namespace LibDeltaSystem.CoreHub.CoreNetwork
             return BitConverter.ToInt16(data, index);
         }
 
+        public void NotifyAllServerListModified()
+        {
+            foreach (var s in list.GetAllServers())
+                SendMessage(s, CoreNetworkOpcode.MESSAGE_NOTIFY_SERVER_LIST_CHANGED, new byte[0]);
+        }
+
         private byte[] _InternalHandleRequest(CoreNetworkServer server, byte[] payload, CoreNetworkOpcode opcode, byte flags)
         {
             if (opcode == CoreNetworkOpcode.MESSAGE_PING)
                 return payload;
             else if (opcode == CoreNetworkOpcode.MESSAGE_STATS)
                 return _InternalHandleStats(server);
+            else if (opcode == CoreNetworkOpcode.MESSAGE_NOTIFY_SERVER_LIST_CHANGED)
+                return _InternalHandleNotifyServerListChanged();
             else
                 return OnMessage(server, opcode, payload);
+        }
+
+        private byte[] _InternalHandleNotifyServerListChanged()
+        {
+            delta.Log("CoreNetworkFramework-_InternalHandleNotifyServerListChanged", $"Server list update requested. Processing...", DeltaLogLevel.Medium);
+            int beforeCount = list.GetAllServers().Count;
+            list.RefreshRequested();
+            delta.Log("CoreNetworkFramework-_InternalHandleNotifyServerListChanged", $"Server list update finished. {list.GetAllServers().Count} servers, {list.GetAllServers().Count - beforeCount} new.", DeltaLogLevel.Medium);
+            return new byte[0];
         }
 
         private byte[] _InternalHandleStats(CoreNetworkServer server)
@@ -527,6 +557,9 @@ namespace LibDeltaSystem.CoreHub.CoreNetwork
             {
                 delta.Log("CoreHub-CoreNetworkFramework", $"Exception occurred attempting to handle ack in user's code: {ex.Message} {ex.StackTrace}", DeltaLogLevel.High);
             }
+
+            //Remove this message from the outgoing queue for now. We might change this behavior later
+            outgoing.Remove(msg);
         }
     }
 }

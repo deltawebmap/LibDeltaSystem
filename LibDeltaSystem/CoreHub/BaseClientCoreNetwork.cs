@@ -1,5 +1,6 @@
 ﻿using LibDeltaSystem.CoreHub.CoreNetwork;
 using LibDeltaSystem.CoreHub.Entities;
+using LibDeltaSystem.CoreHub.Extras.OperationProgressStatus;
 using LibDeltaSystem.RPC;
 using LibDeltaSystem.Tools;
 using MongoDB.Bson;
@@ -21,7 +22,10 @@ namespace LibDeltaSystem.CoreHub
         public BaseClientCoreNetwork()
         {
             SubscribeMessageOpcode(CoreNetworkOpcode.REQUEST_HEALTH_REPORT, OnHealthStatusCheck);
+            SubscribeMessageOpcode(CoreNetworkOpcode.OPERATION_PROGRESS_UPDATED, OnOperationProgressUpdated);
         }
+
+        public List<OperationProgressServer> operationProgressServers = new List<OperationProgressServer>();
         
         //filterType types:
         //0: User ID (no target server)
@@ -166,10 +170,40 @@ namespace LibDeltaSystem.CoreHub
             return new CoreStatusResponse(payload);
         }
 
+        /// <summary>
+        /// Deploys a new server on the specified host and returns it's ID
+        /// </summary>
+        /// <param name="host"></param>
+        /// <param name="type"></param>
+        /// <param name="config"></param>
+        /// <returns></returns>
+        public async Task<ushort> DeployNewServer(CoreNetworkServer host, CoreNetworkServerType type, string config)
+        {
+            //Build payload
+            byte[] payload = new byte[4 + Encoding.UTF8.GetByteCount(config)];
+            BinaryTool.WriteInt16(payload, 0, (short)type);
+            BinaryTool.WriteUInt16(payload, 2, (ushort)(payload.Length - 4));
+            Encoding.UTF8.GetBytes(config, 0, config.Length, payload, 4);
+
+            //Send command
+            var response = await SendMessageGetResponse(host, CoreNetworkOpcode.PROCESSMAN_DEPLOY, payload);
+            
+            //Check status
+            if(response[0] == 0x00)
+            {
+                //OK
+                return BinaryTool.ReadUInt16(response, 1);
+            } else
+            {
+                //Failed
+                throw new Exception(Encoding.UTF8.GetString(response, 1, response.Length - 1));
+            }
+        }
+
         public void RemoteLog(string topic, string message, DeltaLogLevel level)
         {
             //Check if this is blacklisted topic. These topics generally just cause an infinite loop
-            if (topic == "CoreHub-CoreNetworkFramework" && level == DeltaLogLevel.Debug)
+            if ((topic.StartsWith("CoreHub") && level == DeltaLogLevel.Debug) || topic == "CoreHub-_BeginListening")
                 return;
 
             //Serialize
@@ -190,6 +224,23 @@ namespace LibDeltaSystem.CoreHub
             HealthStatusWriter writer = new HealthStatusWriter();
             HealthStatusRequested(writer);
             return writer.ToBytes();
+        }
+
+        private byte[] OnOperationProgressUpdated(CoreNetworkServer server, CoreNetworkOpcode opcode, byte[] payload)
+        {
+            //Extract the data
+            ushort token = BitConverter.ToUInt16(payload, 0);
+            short code = BitConverter.ToInt16(payload, 2);
+            string data = Encoding.UTF8.GetString(payload, 4, payload.Length - 4);
+            
+            //Find a server with a matching token
+            lock(operationProgressServers)
+            {
+                foreach(var s in operationProgressServers)
+                    s.OnOperationResponse(token, code, data);
+            }
+
+            return new byte[0];
         }
 
         /// <summary>

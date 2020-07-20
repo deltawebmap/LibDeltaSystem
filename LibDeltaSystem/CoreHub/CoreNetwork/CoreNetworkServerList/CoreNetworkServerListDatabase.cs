@@ -12,6 +12,9 @@ namespace LibDeltaSystem.CoreHub.CoreNetwork.CoreNetworkServerList
     {
         private List<CoreNetworkServer> servers;
 
+        private DeltaConnection conn;
+        private string enviornment;
+
         public CoreNetworkServerListDatabase()
         {
             this.servers = new List<CoreNetworkServer>();
@@ -19,10 +22,18 @@ namespace LibDeltaSystem.CoreHub.CoreNetwork.CoreNetworkServerList
 
         public async Task Init(DeltaConnection conn, string enviornment = "prod")
         {
+            //Set
+            this.conn = conn;
+            this.enviornment = enviornment;
+            
             //Fetch servers
             var serverData = await (await conn.system_delta_servers.FindAsync(Builders<DbSystemServer>.Filter.Eq("enviornment", enviornment))).ToListAsync();
-            foreach (var s in serverData)
-                AddServer(s);
+            lock(servers)
+            {
+                servers.Clear();
+                foreach (var s in serverData)
+                    AddServer(s);
+            }
         }
         
         private void AddServer(DbSystemServer server)
@@ -34,7 +45,8 @@ namespace LibDeltaSystem.CoreHub.CoreNetwork.CoreNetworkServerList
                 token = ulong.Parse(server.server_token),
                 address = IPAddress.Parse(server.address),
                 port = server.port,
-                type = Enum.Parse<CoreNetworkServerType>(server.server_type)
+                type = Enum.Parse<CoreNetworkServerType>(server.server_type),
+                manager_server_id = (ushort)server.manager_id
             };
             servers.Add(s);
         }
@@ -63,6 +75,11 @@ namespace LibDeltaSystem.CoreHub.CoreNetwork.CoreNetworkServerList
         public override List<CoreNetworkServer> GetAllServers()
         {
             return servers;
+        }
+
+        public override void RefreshRequested()
+        {
+            Init(conn, enviornment).GetAwaiter().GetResult();
         }
     }
 }

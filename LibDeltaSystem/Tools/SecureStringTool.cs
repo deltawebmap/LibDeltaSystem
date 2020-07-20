@@ -58,6 +58,13 @@ namespace LibDeltaSystem.Tools
             return buf;
         }
 
+        public static int GenerateSecureInteger()
+        {
+            byte[] buf = new byte[4];
+            provider.GetBytes(buf);
+            return BitConverter.ToInt32(buf, 0);
+        }
+
         /// <summary>
         /// Checks against a collection if this string was already in use. Returns true if this string is unique.
         /// </summary>
