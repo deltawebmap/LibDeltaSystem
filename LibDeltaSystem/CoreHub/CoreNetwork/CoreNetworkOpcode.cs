@@ -20,6 +20,7 @@ namespace LibDeltaSystem.CoreHub.CoreNetwork
         REMOTE_LOG = 4,
         PROCESSMAN_DEPLOY = 5,
         OPERATION_PROGRESS_UPDATED = 6,
-        PROCESSMAN_UPDATE_ALL = 7
+        PROCESSMAN_UPDATE_ALL = 7,
+        PROCESSMAN_DELETE_MANAGED = 8
     }
 }

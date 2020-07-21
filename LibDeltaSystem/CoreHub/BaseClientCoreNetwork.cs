@@ -177,12 +177,13 @@ namespace LibDeltaSystem.CoreHub
         /// <param name="type"></param>
         /// <param name="config"></param>
         /// <returns></returns>
-        public async Task<ushort> DeployNewServer(CoreNetworkServer host, CoreNetworkServerType type, string config)
+        public async Task<ushort> DeployNewServer(CoreNetworkServer host, CoreNetworkServerType type, string config, byte count)
         {
             //Build payload
             byte[] payload = new byte[4 + Encoding.UTF8.GetByteCount(config)];
             BinaryTool.WriteInt16(payload, 0, (short)type);
-            BinaryTool.WriteUInt16(payload, 2, (ushort)(payload.Length - 4));
+            payload[2] = count;
+            payload[3] = 0x00; //reserved for later usage
             Encoding.UTF8.GetBytes(config, 0, config.Length, payload, 4);
 
             //Send command
