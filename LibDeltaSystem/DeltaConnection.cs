@@ -28,10 +28,7 @@ namespace LibDeltaSystem
     public class DeltaConnection
     {
         public const byte LIB_VERSION_MAJOR = 0;
-        public const byte LIB_VERSION_MINOR = 1;
-
-        public const string SYSTEM_USER_TEST_STEAM = "76561198300124500";
-        public const string SYSTEM_USER_TEST_DELTA = "5e44331adc8304aec01ec965";
+        public const byte LIB_VERSION_MINOR = 2;
         
         private MongoClient content_client;
         private IMongoDatabase content_database;

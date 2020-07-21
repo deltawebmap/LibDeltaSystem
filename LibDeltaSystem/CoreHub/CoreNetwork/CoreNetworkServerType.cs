@@ -14,6 +14,7 @@ namespace LibDeltaSystem.CoreHub.CoreNetwork
         HANDLER_SERVER, //A server that handles HTTP requests
         MASTER_SERVER, //The server on the root of the Delta Web Map api deltamap.net/api/
         PROCESS_MANAGER, //A server that spins off sub-processes
-        TEST //A server that is merely a test
+        TEST, //A server that is merely a test
+        ECHO_CONTENT
     }
 }
