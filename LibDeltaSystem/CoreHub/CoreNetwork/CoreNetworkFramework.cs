@@ -453,10 +453,13 @@ namespace LibDeltaSystem.CoreHub.CoreNetwork
             return BitConverter.ToInt16(data, index);
         }
 
-        public void NotifyAllServerListModified()
+        public void NotifyAllServerListModified(ushort ignoredClient = 0)
         {
             foreach (var s in list.GetAllServers())
-                SendMessage(s, CoreNetworkOpcode.MESSAGE_NOTIFY_SERVER_LIST_CHANGED, new byte[0]);
+            {
+                if(s.id != ignoredClient)
+                    SendMessage(s, CoreNetworkOpcode.MESSAGE_NOTIFY_SERVER_LIST_CHANGED, new byte[0]);
+            }
         }
 
         private byte[] _InternalHandleRequest(CoreNetworkServer server, byte[] payload, CoreNetworkOpcode opcode, byte flags)
