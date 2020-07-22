@@ -28,7 +28,7 @@ namespace LibDeltaSystem
     public class DeltaConnection
     {
         public const byte LIB_VERSION_MAJOR = 0;
-        public const byte LIB_VERSION_MINOR = 2;
+        public const byte LIB_VERSION_MINOR = 3;
         
         private MongoClient content_client;
         private IMongoDatabase content_database;
@@ -92,6 +92,8 @@ namespace LibDeltaSystem
 
         public DeltaConnection(string pathname, ushort server_id, byte system_version_major, byte system_version_minor, BaseClientCoreNetwork network)
         {
+            if (!File.Exists(pathname))
+                throw new Exception("Delta config file was not found! Requested location: "+pathname);
             config = JsonConvert.DeserializeObject<DeltaConnectionConfig>(File.ReadAllText(pathname));
             this.http = new HttpClient();
             this.system_version_major = system_version_major;

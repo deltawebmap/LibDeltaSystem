@@ -114,9 +114,8 @@ namespace LibDeltaSystem.WebFramework
                 await session.OnRequest();
             } catch (Exception ex)
             {
-                //TODO: Log this
-                await WriteStringToBody(e, "Internal Server Error - Try again later", "text/plain", 500);
-                Console.WriteLine($"SERVER ERROR {ex.Message} @ {ex.StackTrace}");
+                await WriteStringToBody(e, $"Internal Server Error. Please try again later.\n\nDEBUG DATA:\nService={service.GetType().Name}\nAppVersion={conn.system_version_major}.{conn.system_version_minor}\nLibVersion={DeltaConnection.LIB_VERSION_MAJOR}.{DeltaConnection.LIB_VERSION_MINOR}\nDeltaServerID={conn.server_id}\nRequestID={session._request_id}", "text/plain", 500);
+                conn.Log("DeltaWebServer-OnHTTPRequest", $"Internal server error. Service={service.GetType().Name}, RequestID={session._request_id}, AppVersion={conn.system_version_major}.{conn.system_version_minor}, LibVersion={DeltaConnection.LIB_VERSION_MAJOR}.{DeltaConnection.LIB_VERSION_MINOR}, URL={e.Request.Path.Value}{e.Request.QueryString}, Exception={ex.Message}, StackTrace={ex.StackTrace}", DeltaLogLevel.High);
             }
         }
 
