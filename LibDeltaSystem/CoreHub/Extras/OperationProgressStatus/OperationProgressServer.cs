@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LibDeltaSystem.Tools;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -9,16 +10,20 @@ namespace LibDeltaSystem.CoreHub.Extras.OperationProgressStatus
     /// </summary>
     public class OperationProgressServer
     {
-        private ushort token;
-
+        public ushort token;
         public event OnProgressUpdatedEventArgs OnProgressUpdated;
 
+        private Dictionary<ushort, LongMsgData> longMessages; //In-Progress long messages
+
         private static ushort next_token;
+
+        public const ushort MAX_BUFFER_SIZE = 16384; //messages larger than this will be sent in multiple parts
 
         public OperationProgressServer()
         {
             token = next_token;
             next_token++;
+            longMessages = new Dictionary<ushort, LongMsgData>();
         }
 
         /// <summary>
@@ -27,14 +32,67 @@ namespace LibDeltaSystem.CoreHub.Extras.OperationProgressStatus
         /// <param name="token"></param>
         /// <param name="progressCode"></param>
         /// <param name="message"></param>
-        public void OnOperationResponse(ushort token, short progressCode, string message)
+        public void OnOperationResponse(byte[] payload)
         {
-            //Validate
-            if (this.token != token)
-                return;
+            //Check opcode
+            switch(payload[2])
+            {
+                case 0x00: OnShortMsgRespond(payload); break;
+                case 0x01: OnLongMsgPilot(payload); break;
+                case 0x02: OnLongMsgChunk(payload); break;
+            }
+        }
+
+        private void OnShortMsgRespond(byte[] payload)
+        {
+            //Read
+            string data = Encoding.UTF8.GetString(payload, 4, payload.Length - 4);
 
             //Call
-            OnProgressUpdated(this, progressCode, message);
+            OnProgressUpdated(this, payload[3], data);
+        }
+
+        private void OnLongMsgPilot(byte[] payload)
+        {
+            //Read
+            byte userCode = payload[3];
+            ushort msgToken = BinaryTool.ReadUInt16(payload, 4);
+            int payloadLength = BinaryTool.ReadInt32(payload, 6);
+
+            //Calculate
+            byte chunks = (byte)((payloadLength / MAX_BUFFER_SIZE) + 1);
+
+            //Create
+            byte[] buffer = new byte[payloadLength];
+            longMessages.Add(msgToken, new LongMsgData
+            {
+                chunksRemaining = chunks,
+                payload = buffer,
+                totalPayloadLength = payloadLength,
+                userCode = userCode
+            });
+        }
+
+        private void OnLongMsgChunk(byte[] payload)
+        {
+            //Read
+            byte bufferNumber = payload[3];
+            ushort msgToken = BinaryTool.ReadUInt16(payload, 4);
+            ushort chunkLength = BinaryTool.ReadUInt16(payload, 6);
+
+            //Copy
+            Array.Copy(payload, 8, longMessages[msgToken].payload, MAX_BUFFER_SIZE * bufferNumber, chunkLength);
+            longMessages[msgToken].chunksRemaining--;
+
+            //Check if completed
+            if(longMessages[msgToken].chunksRemaining == 0)
+            {
+                //Call
+                OnProgressUpdated(this, longMessages[msgToken].userCode, Encoding.UTF8.GetString(longMessages[msgToken].payload));
+
+                //Clean up
+                longMessages.Remove(msgToken);
+            }
         }
 
         /// <summary>
@@ -57,5 +115,13 @@ namespace LibDeltaSystem.CoreHub.Extras.OperationProgressStatus
         }
 
         public delegate void OnProgressUpdatedEventArgs(OperationProgressServer source, short progressCode, string message);
+
+        class LongMsgData
+        {
+            public byte userCode;
+            public byte[] payload;
+            public byte chunksRemaining;
+            public int totalPayloadLength;
+        }
     }
 }

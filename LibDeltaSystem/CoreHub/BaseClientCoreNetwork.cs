@@ -231,15 +231,21 @@ namespace LibDeltaSystem.CoreHub
         {
             //Extract the data
             ushort token = BitConverter.ToUInt16(payload, 0);
-            short code = BitConverter.ToInt16(payload, 2);
-            string data = Encoding.UTF8.GetString(payload, 4, payload.Length - 4);
-            
+
             //Find a server with a matching token
+            OperationProgressServer recipient = null;
             lock(operationProgressServers)
             {
-                foreach(var s in operationProgressServers)
-                    s.OnOperationResponse(token, code, data);
+                foreach (var s in operationProgressServers)
+                {
+                    if (s.token == token)
+                        recipient = s;
+                }
             }
+
+            //Send
+            if(recipient != null)
+                recipient.OnOperationResponse(payload);
 
             return new byte[0];
         }
