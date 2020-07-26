@@ -155,13 +155,31 @@ namespace LibDeltaSystem.CoreHub
                 SendMessage(s, CoreNetworkOpcode.RPC_REFRESH_GROUPS, filterPayload);
         }
 
-        public async Task<byte[]> RequestServerHealth(CoreNetworkServer server)
+        public async Task<Dictionary<string, object>> RequestServerHealth(CoreNetworkServer server)
         {
             //Request
             var health = await SendMessageGetResponse(server, CoreNetworkOpcode.REQUEST_HEALTH_REPORT, new byte[0]);
 
-            //TODO: Parse
-            return health;
+            //Parse
+            Dictionary<string, object> output = new Dictionary<string, object>();
+            int offset = 1;
+            for (int i = 0; i < health[0]; i++)
+            {
+                string key = Encoding.UTF8.GetString(health, offset + 1, health[offset]);
+                offset += key.Length + 1;
+                byte type = health[offset];
+                byte len = health[offset + 1];
+                offset += 2;
+                string value;
+                if (type == 1)
+                    value = LibDeltaSystem.Tools.BinaryTool.ReadInt32(health, offset).ToString();
+                else
+                    value = Encoding.UTF8.GetString(health, offset, len);
+                offset += len;
+                output.Add(key, value);
+            }
+
+            return output;
         }
 
         public async Task<CoreStatusResponse> RequestServerStats(CoreNetworkServer server)
