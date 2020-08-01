@@ -21,6 +21,15 @@ namespace LibDeltaSystem.Tools
         }
 
         /// <summary>
+        /// Generates a secure string THAT MAY NOT BE UNIQUE. This will use 0-9, A-Z
+        /// </summary>
+        /// <returns></returns>
+        public static string GenerateSecureStringFullCaps(int len)
+        {
+            return GenerateSecureString(len, "1234567890QWERTYUIOPASDFGHJKLZXCVBNM".ToCharArray());
+        }
+
+        /// <summary>
         /// Generates a secure string THAT MAY NOT BE UNIQUE.
         /// </summary>
         /// <returns></returns>
