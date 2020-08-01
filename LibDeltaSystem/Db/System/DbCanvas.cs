@@ -2,6 +2,7 @@
 using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -101,24 +102,14 @@ namespace LibDeltaSystem.Db.System
         /// </summary>
         /// <param name="uc"></param>
         /// <returns></returns>
-        public async Task SetNewThumbnail(DeltaConnection conn, DbUserContent uc)
+        public async Task SetNewThumbnail(DeltaConnection conn, Stream content)
         {
-            //Attempt to remove the old thumbnail
-            if(thumbnail_token != null)
-            {
-                DbUserContent old = await conn.GetUserContentByToken(thumbnail_token);
-                if (old != null)
-                    await old.DoDelete(conn);
-            }
-
-            //Set details
-            thumbnail_url = uc.url;
-            thumbnail_token = uc.token;
-            thumbnail_time = uc.upload_time;
+            //Create
+            string thumbnail_url = await Tools.UserContentTool.UploadUserContentResizeImage(content, 256, 256);
 
             //Update
             var updateBuilder = Builders<DbCanvas>.Update;
-            var update = updateBuilder.Set("thumbnail_url", thumbnail_url).Set("thumbnail_token", thumbnail_token).Set("thumbnail_time", thumbnail_time);
+            var update = updateBuilder.Set("thumbnail_url", thumbnail_url).Set("thumbnail_time", DateTime.UtcNow);
             var filterBuilder = Builders<DbCanvas>.Filter;
             var filter = filterBuilder.Eq("_id", _id);
             this.name = name;

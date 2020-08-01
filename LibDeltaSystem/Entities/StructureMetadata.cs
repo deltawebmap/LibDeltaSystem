@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace LibDeltaSystem.Entities.DynamicTiles
+namespace LibDeltaSystem.Entities
 {
     public class StructureMetadata
     {

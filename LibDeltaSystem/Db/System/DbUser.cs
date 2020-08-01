@@ -257,7 +257,7 @@ namespace LibDeltaSystem.Db.System
         /// <param name="conn"></param>
         /// <param name="token"></param>
         /// <returns></returns>
-        public static async Task<DbUser> AuthenticateUserToken(DeltaConnection conn, string token)
+        public static async Task<DbUser> AuthenticateUserToken(DeltaDatabaseConnection conn, string token)
         {
             //First, get our token object
             DbToken tok = await conn.GetTokenByTokenAsync(token);

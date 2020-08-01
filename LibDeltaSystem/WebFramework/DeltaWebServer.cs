@@ -143,7 +143,8 @@ namespace LibDeltaSystem.WebFramework
                 hosts = conn.config.hosts,
                 lib_version = $"{DeltaConnection.LIB_VERSION_MAJOR}.{DeltaConnection.LIB_VERSION_MINOR}",
                 server_version = $"{conn.system_version_major}.{conn.system_version_minor}",
-                name = conn.system_name
+                server_id = conn.server_id,
+                server_type = conn.me.server_type
             };
         }
 

@@ -8,11 +8,12 @@ namespace LibDeltaSystem.WebFramework.Entities
     {
         public DateTime start;
         public long uptime;
-        public string name;
         public string enviornment;
         public bool debug_mode;
         public string server_version;
         public string lib_version;
         public DeltaConnectionConfig_Hosts hosts;
+        public string server_type;
+        public int server_id;
     }
 }
