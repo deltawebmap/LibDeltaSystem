@@ -105,7 +105,7 @@ namespace LibDeltaSystem.Db.System
         public async Task SetNewThumbnail(DeltaConnection conn, Stream content)
         {
             //Create
-            string thumbnail_url = await Tools.UserContentTool.UploadUserContentResizeImage(content, 256, 256);
+            string thumbnail_url = await Tools.UserContentTool.UploadUserContentResizeImage(conn, content, 256, 256);
 
             //Update
             var updateBuilder = Builders<DbCanvas>.Update;

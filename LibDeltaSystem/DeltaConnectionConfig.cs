@@ -9,25 +9,22 @@ namespace LibDeltaSystem
         public string env;
         public Dictionary<string, DeltaConnectionConfig_Enviornment> enviornments;
 
-        public string mongodb_connection { get { return enviornments[env].mongodb_connection; } }
-
-        public string rpc_key; //256 bytes of Base-64 encoded content to be kept as a private key
-        public int rpc_port; //Port to use when communicating with the RPC
-        public string rpc_ip; //RPC port. MUST be an actual port, not a hostname
+        public string mongodb_connection;  //MongoDB connection string
 
         public int steam_cache_expire_minutes; //Number of minutes before a steam profile expires
         public string steam_api_token;
 
         public string structure_metadata_config;
 
-        public bool debug_mode;
+        public string firebase_config;
+        public string firebase_uc_bucket;
 
         public DeltaConnectionConfig_Hosts hosts;
     }
 
     public class DeltaConnectionConfig_Enviornment
     {
-        public string mongodb_connection;  //MongoDB connection string
+        
     }
 
     public class DeltaConnectionConfig_Hosts

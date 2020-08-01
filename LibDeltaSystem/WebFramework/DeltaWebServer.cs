@@ -139,7 +139,6 @@ namespace LibDeltaSystem.WebFramework
                 start = start,
                 uptime = (long)(DateTime.UtcNow - start).TotalSeconds,
                 enviornment = conn.config.env,
-                debug_mode = conn.config.debug_mode,
                 hosts = conn.config.hosts,
                 lib_version = $"{DeltaConnection.LIB_VERSION_MAJOR}.{DeltaConnection.LIB_VERSION_MINOR}",
                 server_version = $"{conn.system_version_major}.{conn.system_version_minor}",

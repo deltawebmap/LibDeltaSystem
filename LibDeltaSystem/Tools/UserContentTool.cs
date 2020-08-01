@@ -19,17 +19,17 @@ namespace LibDeltaSystem.Tools
         /// </summary>
         /// <param name="data"></param>
         /// <returns></returns>
-        public static async Task<string> UploadUserContent(Stream data)
+        public static async Task<string> UploadUserContent(DeltaConnection conn, Stream data)
         {
             //Get creds
-            var credential = GoogleCredential.FromFile(@"C:\Users\Roman\Documents\delta_dev\backend\firebase_config.json");
+            var credential = GoogleCredential.FromFile(conn.config.firebase_config);
             var client = StorageClient.Create(credential);
 
             //Generate a unique ID
             string id = SecureStringTool.GenerateSecureString(64);
 
             //Upload content
-            var content = await client.UploadObjectAsync("delta-web-map.appspot.com", id + ".png", "image/png", data);
+            var content = await client.UploadObjectAsync(conn.config.firebase_uc_bucket, id + ".png", "image/png", data);
 
             return $"https://firebasestorage.googleapis.com/v0/b/delta-web-map.appspot.com/o/{id}.png?alt=media";
         }
@@ -41,7 +41,7 @@ namespace LibDeltaSystem.Tools
         /// <param name="width"></param>
         /// <param name="height"></param>
         /// <returns></returns>
-        public static async Task<string> UploadUserContentResizeImage(Stream data, int width, int height)
+        public static async Task<string> UploadUserContentResizeImage(DeltaConnection conn, Stream data, int width, int height)
         {
             //Read as image
             string url;
@@ -64,7 +64,7 @@ namespace LibDeltaSystem.Tools
 
                 //Rewind and upload
                 ms.Position = 0;
-                url = await UploadUserContent(ms);
+                url = await UploadUserContent(conn, ms);
             }
             return url;
         }
