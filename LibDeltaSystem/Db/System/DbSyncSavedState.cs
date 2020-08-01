@@ -1,4 +1,5 @@
-﻿using MongoDB.Driver;
+﻿using MongoDB.Bson;
+using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -34,7 +35,7 @@ namespace LibDeltaSystem.Db.System
         /// <summary>
         /// The ID of the server this is connected to
         /// </summary>
-        public string server_id { get; set; }
+        public ObjectId server_id { get; set; }
 
         /// <summary>
         /// The version of the sync server this was created on

@@ -35,6 +35,11 @@ namespace LibDeltaSystem.Db.System
         public ObjectId? owner_uid { get; set; }
 
         /// <summary>
+        /// Does this have an owner?
+        /// </summary>
+        public bool is_claimed { get; set; }
+
+        /// <summary>
         /// Creds checked to verify the connection between the slave server.
         /// </summary>
         public string token { get; set; }
@@ -104,9 +109,9 @@ namespace LibDeltaSystem.Db.System
         /// The last time secure mode was toggled. Used to notify users if it's been changed
         /// </summary>
         public DateTime last_secure_mode_toggled { get; set; }
-        
+
         /// <summary>
-        /// State flags
+        /// State flags https://docs.google.com/spreadsheets/d/1DcpgobdkajnkzJi98Gml8hG4Ok4hkBJoO7ylpnG_57Y/edit?usp=sharing
         /// </summary>
         public int flags { get; set; }
 
@@ -458,7 +463,11 @@ namespace LibDeltaSystem.Db.System
             //Update
             owner_uid = owner._id;
             var builder = Builders<DbServer>.Update;
-            await ExplicitUpdateAsync(conn, builder.Set("owner_uid", owner._id));
+            await ExplicitUpdateAsync(conn, builder.Set("owner_uid", owner._id).Set("is_claimed", true));
+
+            //Update here
+            owner_uid = owner;
+            is_claimed = true;
 
             //Notify the user that a new server is now owned by them
             await RPCMessageTool.SendUserServerClaimed(conn, owner, this);
