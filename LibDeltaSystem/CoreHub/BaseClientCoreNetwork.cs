@@ -1,6 +1,7 @@
 ﻿using LibDeltaSystem.CoreHub.CoreNetwork;
 using LibDeltaSystem.CoreHub.Entities;
 using LibDeltaSystem.CoreHub.Extras.OperationProgressStatus;
+using LibDeltaSystem.Db.System;
 using LibDeltaSystem.RPC;
 using LibDeltaSystem.Tools;
 using MongoDB.Bson;
@@ -140,6 +141,11 @@ namespace LibDeltaSystem.CoreHub
 
             //Send
             _SendRPCEvent(opcode, 3, filterPayload, 0, payload);
+        }
+
+        public void SendRPCEventToServerTribeId(RPCOpcode opcode, RPCPayload payload, DbServer server, int tribe_id)
+        {
+            SendRPCEventToServerTribeId(opcode, payload, server._id, tribe_id);
         }
 
         public void RefreshUserIdGroups(ObjectId user_id)

@@ -28,7 +28,7 @@ namespace LibDeltaSystem
     public class DeltaConnection
     {
         public const byte LIB_VERSION_MAJOR = 0;
-        public const byte LIB_VERSION_MINOR = 5;
+        public const byte LIB_VERSION_MINOR = 6;
         
         private MongoClient content_client;
         private IMongoDatabase content_database;

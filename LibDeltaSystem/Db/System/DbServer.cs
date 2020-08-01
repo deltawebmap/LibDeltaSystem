@@ -466,7 +466,7 @@ namespace LibDeltaSystem.Db.System
             await ExplicitUpdateAsync(conn, builder.Set("owner_uid", owner._id).Set("is_claimed", true));
 
             //Update here
-            owner_uid = owner;
+            owner_uid = owner._id;
             is_claimed = true;
 
             //Notify the user that a new server is now owned by them
