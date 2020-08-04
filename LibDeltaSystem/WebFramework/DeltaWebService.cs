@@ -150,6 +150,16 @@ namespace LibDeltaSystem.WebFramework
             return DeltaCommonHTTPMethod.Unknown;
         }
 
+        public int GetIntFromQuery(string name, int defaultValue)
+        {
+            if (!e.Request.Query.ContainsKey(name))
+                return defaultValue;
+            if (int.TryParse(e.Request.Query[name], out int value))
+                return value;
+            else
+                return defaultValue;
+        }
+
         public bool TryGetIntFromQuery(string name, out int value)
         {
             value = 0;

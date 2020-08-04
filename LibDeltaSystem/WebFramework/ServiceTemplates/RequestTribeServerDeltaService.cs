@@ -14,11 +14,6 @@ namespace LibDeltaSystem.WebFramework.ServiceTemplates
     public abstract class RequestTribeServerDeltaService : ArkServerDeltaService
     {
         /// <summary>
-        /// The requested tribe ID in the URL. Null if a wildcard was specified
-        /// </summary>
-        public int? requestedTribeId;
-
-        /// <summary>
         /// The active user's player profile
         /// </summary>
         public DbPlayerProfile profile;
@@ -55,57 +50,24 @@ namespace LibDeltaSystem.WebFramework.ServiceTemplates
                 return false;
             }
 
-            //Get requested tribe ID
-            if (args[DeltaWebServiceDefinition.ARG_TRIBE] == "*")
-            {
-                requestedTribeId = null;
-            }
-            else
-            {
-                if (!int.TryParse(args[DeltaWebServiceDefinition.ARG_TRIBE], out int trR))
-                {
-                    await WriteString("Tribe ID Not Valid", "text/plain", 403);
-                    return false;
-                }
-                requestedTribeId = trR;
-            }
-
-            //Make sure that non-admins are only attempting to fetch their own data (or a wildcard)
-            if(!admin)
-            {
-                if (requestedTribeId.HasValue && requestedTribeId.GetValueOrDefault() != profile.tribe_id)
-                {
-                    await WriteString("You do not have access to this tribe ID", "text/plain", 403);
-                    return false;
-                }
-            }
-
             return true;
         }
 
         public FilterDefinition<T> GetServerTribeFilter<T>()
         {
             var builder = Builders<T>.Filter;
-            if(admin && canRequestOtherTribes)
+            if(canRequestOtherTribes)
             {
                 //This user is admin, they may request whatever they want
-                if (requestedTribeId.HasValue)
-                    return builder.Eq("server_id", server._id) & builder.Eq("tribe_id", requestedTribeId.Value);
-                else
-                    return builder.Eq("server_id", server._id);
-            } else if(admin && !canRequestOtherTribes)
+                return builder.Eq("server_id", server._id);
+            } else if(!canRequestOtherTribes && profile != null)
             {
-                //This user is admin, but they can't request whatever they want because secure mode is on
-                if(profile != null && requestedTribeId.HasValue)
-                {
-                    if (requestedTribeId.Value == profile?.tribe_id || !requestedTribeId.HasValue)
-                        return builder.Eq("server_id", server._id) & builder.Eq("tribe_id", profile.tribe_id);
-                }
-                return builder.Eq("server_id", server._id) & builder.Eq<int>("tribe_id", 0); //Shouldn't return other tribes
+                //This player can only request their own tribe
+                return builder.Eq("server_id", server._id) & builder.Eq("tribe_id", profile.tribe_id);
             } else
             {
-                //This player may only fetch their own tribe. We checked that this is the selected tribe when we first requested this.
-                return builder.Eq("server_id", server._id) & builder.Eq("tribe_id", profile.tribe_id);
+                //This player doesn't have a tribe and can't request others!
+                return builder.Eq("server_id", server._id) & builder.Eq<int>("tribe_id", 0); //Shouldn't return other tribes
             }
         }
     }

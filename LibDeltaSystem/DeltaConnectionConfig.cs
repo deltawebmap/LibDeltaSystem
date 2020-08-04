@@ -7,7 +7,6 @@ namespace LibDeltaSystem
     public class DeltaConnectionConfig
     {
         public string env;
-        public Dictionary<string, DeltaConnectionConfig_Enviornment> enviornments;
 
         public string mongodb_connection;  //MongoDB connection string
 
@@ -20,11 +19,6 @@ namespace LibDeltaSystem
         public string firebase_uc_bucket;
 
         public DeltaConnectionConfig_Hosts hosts;
-    }
-
-    public class DeltaConnectionConfig_Enviornment
-    {
-        
     }
 
     public class DeltaConnectionConfig_Hosts

@@ -58,13 +58,16 @@ namespace LibDeltaSystem.WebFramework
         public DateTime start;
 
         public long stat_requests_handled;
+
+        public List<string> exposedHeaders = new List<string>(); //List of headers that are exposed to CORS
         
         public async Task OnHTTPRequest(HttpContext e)
         {
             //Do CORS stuff
             e.Response.Headers.Add("X-Delta-Server-ID", conn.network.me.id.ToString());
             e.Response.Headers.Add("X-Delta-Server-Type", conn.network.me.type.ToString());
-            e.Response.Headers.Add("Access-Control-Allow-Headers", "Authorization");
+            e.Response.Headers.Add("Access-Control-Expose-Headers", GetExposedHeadersString());
+            e.Response.Headers.Add("Access-Control-Allow-Headers", GetExposedHeadersString());
             e.Response.Headers.Add("Access-Control-Allow-Origin", "*");
             e.Response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, OPTIONS, DELETE, PUT, PATCH");
             if (e.Request.Method.ToUpper() == "OPTIONS")
@@ -117,6 +120,18 @@ namespace LibDeltaSystem.WebFramework
                 await WriteStringToBody(e, $"Internal Server Error. Please try again later.\n\nDEBUG DATA:\nService={service.GetType().Name}\nAppVersion={conn.system_version_major}.{conn.system_version_minor}\nLibVersion={DeltaConnection.LIB_VERSION_MAJOR}.{DeltaConnection.LIB_VERSION_MINOR}\nDeltaServerID={conn.server_id}\nRequestID={session._request_id}", "text/plain", 500);
                 conn.Log("DeltaWebServer-OnHTTPRequest", $"Internal server error. Service={service.GetType().Name}, RequestID={session._request_id}, AppVersion={conn.system_version_major}.{conn.system_version_minor}, LibVersion={DeltaConnection.LIB_VERSION_MAJOR}.{DeltaConnection.LIB_VERSION_MINOR}, URL={e.Request.Path.Value}{e.Request.QueryString}, Exception={ex.Message}, StackTrace={ex.StackTrace}", DeltaLogLevel.High);
             }
+        }
+
+        /// <summary>
+        /// Returns a list of headers that are exposed for CORS
+        /// </summary>
+        /// <returns></returns>
+        private string GetExposedHeadersString()
+        {
+            string h = "Authorization, X-Delta-Server-ID, X-Delta-Server-Type";
+            foreach (var e in exposedHeaders)
+                h += ", " + e;
+            return h;
         }
 
         /// <summary>
