@@ -27,7 +27,7 @@ namespace LibDeltaSystem
     public class DeltaConnection : DeltaDatabaseConnection
     {
         public const byte LIB_VERSION_MAJOR = 0;
-        public const byte LIB_VERSION_MINOR = 12;
+        public const byte LIB_VERSION_MINOR = 13;
 
         public DeltaConnectionConfig config;
         public HttpClient http;
