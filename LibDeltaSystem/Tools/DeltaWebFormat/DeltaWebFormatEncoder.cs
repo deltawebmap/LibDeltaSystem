@@ -380,57 +380,24 @@ namespace LibDeltaSystem.Tools.DeltaWebFormat
             T[] data = (T[])value;
             int length = data.Length;
 
-            //Determine length
-            if (data.Length > byte.MaxValue)
-            {
-                WriteUInt16((ushort)data.Length);
-                flags |= 1 << 0;
-            }
-            else
-            {
-                WriteByte((byte)data.Length);
-            }
-
-            //Count null entries
-            int nullCount = 0;
-            foreach(var d in data)
-            {
-                if (d == null)
-                    nullCount++;
-            }
-
-            //If there are any null entries, but not all of them are, we'll need to include null flags
-            bool nullFlags = (nullCount > 0) && (nullCount < data.Length);
-            if(nullFlags)
-            {
-                flags |= 1 << 1;
-            }
-
-            //If all are null, don't write anything but a flag signaling that
-            bool allNull = nullCount == data.Length;
-            if (allNull)
-            {
-                flags |= 1 << 2;
-                return;
-            }
+            //Write length
+            WriteUInt16((ushort)data.Length);
 
             //Write entries
             foreach(var d in data)
             {
                 //Add flag in this
-                if(nullFlags)
+                if (d == null)
                 {
-                    if(d == null)
-                    {
-                        WriteByte(0x01);
-                    } else
-                    {
-                        WriteByte(0x00);
-                    }
+                    WriteByte(0x01);
+                }
+                else
+                {
+                    WriteByte(0x00);
                 }
 
                 //Write
-                if(d != null)
+                if (d != null)
                     write(d);
             }
         }
