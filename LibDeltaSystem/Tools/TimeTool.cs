@@ -6,14 +6,18 @@ namespace LibDeltaSystem.Tools
 {
     public class TimeTool
     {
-        public DateTime GetDateTimeFromEpoch(long time)
+        //Jan 1, 2020 at midnight UTC
+        public const long MASTER_EPOCH = 637134336000000000;
+        public const int CONVERSION_FACTOR = 10000000; //Number of ticks in one second
+
+        public static int GetStandardEpochFromTicks(long ticks)
         {
-            return new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(time);
+            return (int)((ticks - MASTER_EPOCH) / CONVERSION_FACTOR);
         }
 
-        public long GetEpochFromDateTime(DateTime time)
+        public static long GetTicksFromStandardEpoch(int epoch)
         {
-            return (long)(time - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalSeconds;
+            return ((long)epoch * CONVERSION_FACTOR) + MASTER_EPOCH;
         }
     }
 }

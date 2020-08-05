@@ -15,19 +15,19 @@ namespace LibDeltaSystem.Db.ArkEntries
         public ObjectId _id { get; set; }
 
         /// <summary>
-        /// The mod ID
-        /// </summary>
-        public string mod { get; set; }
-
-        /// <summary>
-        /// The classname of this item
+        /// Classname of this item
         /// </summary>
         public string classname { get; set; }
 
         /// <summary>
-        /// The time this was added
+        /// The name of the package this belongs to
         /// </summary>
-        public DateTime time { get; set; }
+        public string package_name { get; set; }
+
+        /// <summary>
+        /// The time this was uploaded
+        /// </summary>
+        public long time { get; set; }
 
         /// <summary>
         /// The actual entry

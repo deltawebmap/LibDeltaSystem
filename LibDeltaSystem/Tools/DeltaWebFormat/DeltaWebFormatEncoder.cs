@@ -9,19 +9,21 @@ using Newtonsoft.Json;
 
 namespace LibDeltaSystem.Tools.DeltaWebFormat
 {
-    public class DeltaWebFormatEncoder<T>
+    public class DeltaWebFormatEncoder
     {
         public Stream output;
         private List<string> nameTable;
         private uint sign;
+        private Type dataType;
 
-        public DeltaWebFormatEncoder(Stream output)
+        public DeltaWebFormatEncoder(Stream output, Type dataType)
         {
             this.output = output;
+            this.dataType = dataType;
             nameTable = new List<string>();
         }
 
-        public void Encode(List<T> data, Dictionary<byte, byte[]> customData)
+        public void Encode(object[] data, Dictionary<byte, byte[]> customData)
         {
             //Build name table
             foreach (var o in data)
@@ -31,7 +33,7 @@ namespace LibDeltaSystem.Tools.DeltaWebFormat
             WriteFixedString("DWMX"); //File type
             WriteInt32(nameTable.Count); //Name table length
             WriteUInt32(1); //File version
-            WriteUInt32((uint)data.Count); //Number of items
+            WriteUInt32((uint)data.Length); //Number of items
 
             //Write custom data
             var customKeys = customData.Keys;
@@ -48,7 +50,7 @@ namespace LibDeltaSystem.Tools.DeltaWebFormat
                 WriteLongLengthedString(n);
 
             //Write struct definition
-            WriteStructDefinitions(typeof(T));
+            WriteStructDefinitions(dataType);
 
             //Write all items
             foreach (var n in data)

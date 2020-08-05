@@ -57,6 +57,7 @@ namespace LibDeltaSystem
         public IMongoCollection<DbArkEntry<DinosaurEntry>> arkentries_dinos;
         public IMongoCollection<DbArkEntry<ItemEntry>> arkentries_items;
         public IMongoCollection<DbArkMapEntry> arkentries_maps;
+        public IMongoCollection<DbPrimalPackage> arkentries_primal_packages;
 
         public static DeltaDatabaseConnection OpenFromDeltaConfig(string deltaConfigPath)
         {
@@ -109,6 +110,7 @@ namespace LibDeltaSystem
             arkentries_dinos = charlie_database.GetCollection<DbArkEntry<DinosaurEntry>>("dino_entries");
             arkentries_items = charlie_database.GetCollection<DbArkEntry<ItemEntry>>("item_entries");
             arkentries_maps = charlie_database.GetCollection<DbArkMapEntry>("maps");
+            arkentries_primal_packages = charlie_database.GetCollection<DbPrimalPackage>("packages");
         }
 
         private static async Task<T> GetDocumentById<T>(IMongoCollection<T> collec, string id)
@@ -440,6 +442,22 @@ namespace LibDeltaSystem
                 return null;
             else
                 return r;
+        }
+
+        public async Task<DbPrimalPackage> GetPrimalPackageByNameAsync(string name)
+        {
+            var filterBuilder = Builders<DbPrimalPackage>.Filter;
+            var filter = filterBuilder.Eq("name", name);
+            var results = await arkentries_primal_packages.FindAsync(filter);
+            return await results.FirstOrDefaultAsync();
+        }
+
+        public async Task<DbPrimalPackage> GetPrimalPackageByModAsync(long mod, string type)
+        {
+            var filterBuilder = Builders<DbPrimalPackage>.Filter;
+            var filter = filterBuilder.Eq("mod_id", mod) & filterBuilder.Eq("package_type", type);
+            var results = await arkentries_primal_packages.FindAsync(filter);
+            return await results.FirstOrDefaultAsync();
         }
     }
 }

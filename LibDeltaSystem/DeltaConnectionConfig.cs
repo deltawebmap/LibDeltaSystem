@@ -26,5 +26,6 @@ namespace LibDeltaSystem
         public string master; //https://deltamap.net
         public string echo; //https://echo-content.deltamap.net
         public string assets_icon; //https://icon-assets.deltamap.net
+        public string packages; //https://charlie-packages.deltamap.net
     }
 }
