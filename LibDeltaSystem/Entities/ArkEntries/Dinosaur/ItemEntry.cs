@@ -29,6 +29,7 @@ namespace LibDeltaSystem.Entities.ArkEntries.Dinosaur
         public string structure_classname { get; set; } //The name of the structure this builds, if any
 
         //Consumables
+        [WebFormatAttributeUseObject]
         public ItemEntry_ConsumableAddStatusValue[] addStatusValues { get; set; }
     }
 
