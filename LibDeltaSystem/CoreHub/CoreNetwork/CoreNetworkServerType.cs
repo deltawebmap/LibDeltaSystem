@@ -16,6 +16,7 @@ namespace LibDeltaSystem.CoreHub.CoreNetwork
         PROCESS_MANAGER, //A server that spins off sub-processes
         TEST, //A server that is merely a test
         ECHO_CONTENT,
-        SYNC_INGEST_V1
+        SYNC_INGEST_V1,
+        CHARLIE_PACKAGES
     }
 }
