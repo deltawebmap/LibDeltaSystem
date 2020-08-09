@@ -64,6 +64,7 @@ namespace LibDeltaSystem.CoreHub
                 output.Write(BitConverter.GetBytes((ushort)actionData.Length), 0, 2);
 
                 //If the length is <=255 bytes in length, don't compress it
+                long payloadStartPos = output.Position;
                 if (actionData.Length <= 255)
                 {
                     //Write compressed
@@ -77,9 +78,14 @@ namespace LibDeltaSystem.CoreHub
                     }
 
                     //Rewind and write compressed length
-                    ushort compressedLen = (ushort)(compressedLenPos + 2 - output.Position);
+                    long compressedLen = output.Position - payloadStartPos;
+                    if (compressedLen > ushort.MaxValue)
+                    {
+                        delta.Log("BaseClientCoreNetwork-_SendRPCEvent", $"Compressed payload is too long! Payload length: " + compressedLen, DeltaLogLevel.Alert);
+                        throw new Exception($"Compressed payload is too long! Payload length: " + compressedLen);
+                    }
                     output.Position = compressedLenPos;
-                    output.Write(BitConverter.GetBytes(compressedLen), 0, 2);
+                    output.Write(BitConverter.GetBytes((ushort)compressedLen), 0, 2);
                 }
 
                 //Send

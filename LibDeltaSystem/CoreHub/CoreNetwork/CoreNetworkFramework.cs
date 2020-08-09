@@ -348,6 +348,7 @@ namespace LibDeltaSystem.CoreHub.CoreNetwork
                 {
                     responseStatus = 0x01;
                     responseData = Encoding.UTF8.GetBytes($"{ex.Message} {ex.StackTrace}");
+                    delta.Log("CoreNetworkFramework-HandleMessage", $"Got error handling client message: {ex.Message} {ex.StackTrace}", DeltaLogLevel.High);
                 }
 
                 //Create ack message
