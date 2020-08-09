@@ -169,7 +169,7 @@ namespace LibDeltaSystem.Db.Content
         /// <param name="token"></param>
         /// <param name="server"></param>
         /// <returns></returns>
-        public static async Task<DbDino> GetDinosaurByID(DeltaConnection conn, ulong token, DbServer server)
+        public static async Task<DbDino> GetDinosaurByID(DeltaDatabaseConnection conn, ulong token, DbServer server)
         {
             var filterBuilder = Builders<DbDino>.Filter;
             var filter = filterBuilder.Eq("dino_id", token) & filterBuilder.Eq("server_id", server._id);
@@ -198,6 +198,16 @@ namespace LibDeltaSystem.Db.Content
 
             //Send RPC update
             await Tools.RPCMessageTool.SendDbContentUpdateMessage(conn, RPC.Payloads.Entities.RPCSyncType.Dino, response, server._id, tribe_id);
+        }
+
+        public async Task UpdatePrefs(DeltaConnection conn, DbServer server, SavedDinoTribePrefs prefs)
+        {
+            //Create update and apply
+            var update = Builders<DbDino>.Update.Set("prefs", prefs);
+            await UpdateDino(conn, server, update);
+
+            //Set here
+            this.prefs = prefs;
         }
 
         public int GetBaseLevelUp(ArkDinoStat stat)

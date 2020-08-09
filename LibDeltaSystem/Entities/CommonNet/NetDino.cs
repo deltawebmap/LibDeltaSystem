@@ -1,4 +1,5 @@
 ﻿using LibDeltaSystem.Db.Content;
+using LibDeltaSystem.Db.System.Entities;
 using LibDeltaSystem.Tools.DeltaWebFormat.Attributes;
 using System;
 using System.Collections.Generic;
@@ -38,6 +39,8 @@ namespace LibDeltaSystem.Entities.CommonNet
         public float experience_points { get; set; }
         public DateTime last_sync_time { get; set; }
         public bool is_alive { get; set; }
+        [WebFormatAttributeUseObject]
+        public SavedDinoTribePrefs tribe_prefs { get; set; }
 
         public static NetDino ConvertDbDino(DbDino dino)
         {
@@ -68,7 +71,8 @@ namespace LibDeltaSystem.Entities.CommonNet
                 is_cryo = dino.is_cryo,
                 experience_points = dino.experience_points,
                 last_sync_time = dino.last_sync_time,
-                is_alive = dino.is_alive
+                is_alive = dino.is_alive,
+                tribe_prefs = dino.prefs
             };
         }
     }

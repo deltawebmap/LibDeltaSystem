@@ -78,8 +78,16 @@ namespace LibDeltaSystem.WebFramework.WebSockets.Groups
             foreach (var q in queries)
                 holder.AddClient(this, q);
 
+            //Notify
+            await OnGroupsUpdated();
+
             //Log
             conn.Log("RPCConnection-HandleCommandAuth", $"[SESSION {_request_id}] Refreshed groups. {queries.Count} queries, {groups.Count} groups added.", DeltaLogLevel.Debug);
+        }
+
+        public virtual async Task OnGroupsUpdated()
+        {
+            //Let users do what they want with this
         }
     }
 }
