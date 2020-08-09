@@ -244,7 +244,7 @@ namespace LibDeltaSystem.Db.System
                 await NotifyUserRemoved(conn, user);
 
             //Reset user groups
-            await RPCMessageTool.SystemNotifyUserGroupReset(conn, user);
+            RPCMessageTool.SystemNotifyUserGroupReset(conn, user);
 
             return results.DeletedCount == 1;
         }
@@ -517,7 +517,7 @@ namespace LibDeltaSystem.Db.System
             //Send RPC message
             RPCMessageTool.SendUserServerPermissionsChanged(conn, user._id, this); //Tell this user about the change
             RPCMessageTool.SendGuildAdminListUpdated(conn, this); //Tell users on the server
-            await RPCMessageTool.SystemNotifyUserGroupReset(conn, user); //Reset user groups
+            RPCMessageTool.SystemNotifyUserGroupReset(conn, user); //Reset user groups
 
             //If this user doesn't have a profile and isn't owner, that means that they've lost access. Tell them that
             if (await GetUserPlayerProfile(conn, user) == null && owner_uid != user._id)

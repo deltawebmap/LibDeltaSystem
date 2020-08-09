@@ -21,6 +21,19 @@ namespace LibDeltaSystem.Entities.CommonNet
             public int stack_size { get; set; }
             public ushort flags { get; set; }
             public Dictionary<ushort, string> custom_data { get; set; }
+
+            public static NetInventory_Item ConvertItem(DbInventory_InventoryItem item)
+            {
+                return new NetInventory_Item
+                {
+                    classname = item.classname,
+                    durability = item.durability,
+                    item_id = item.item_id.ToString(),
+                    stack_size = item.stack_size,
+                    flags = item.flags,
+                    custom_data = item.custom_data
+                };
+            }
         }
 
         public static NetInventory ConvertInventory(DbInventory inv)
@@ -29,15 +42,7 @@ namespace LibDeltaSystem.Entities.CommonNet
             NetInventory_Item[] items = new NetInventory_Item[inv.items.Length];
             for(var i = 0; i<inv.items.Length; i+=1)
             {
-                items[i] = new NetInventory_Item
-                {
-                    classname = inv.items[i].classname,
-                    durability = inv.items[i].durability,
-                    item_id = inv.items[i].item_id.ToString(),
-                    stack_size = inv.items[i].stack_size,
-                    flags = inv.items[i].flags,
-                    custom_data = inv.items[i].custom_data
-                };
+                items[i] = NetInventory_Item.ConvertItem(inv.items[i]);
             }
 
             //Return full object

@@ -1,6 +1,7 @@
 ﻿using LibDeltaSystem.Db.System;
 using LibDeltaSystem.Db.System.Entities;
 using LibDeltaSystem.Entities;
+using LibDeltaSystem.Entities.CommonNet;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
@@ -197,7 +198,10 @@ namespace LibDeltaSystem.Db.Content
             });
 
             //Send RPC update
-            await Tools.RPCMessageTool.SendDbContentUpdateMessage(conn, RPC.Payloads.Entities.RPCSyncType.Dino, response, server._id, tribe_id);
+            Tools.RPCMessageTool.SendDbContentUpdateMessage(conn, RPC.Payloads.Entities.RPCSyncType.Dino, new List<object>
+            {
+                NetDino.ConvertDbDino(response)
+            }, server._id, tribe_id);
         }
 
         public async Task UpdatePrefs(DeltaConnection conn, DbServer server, SavedDinoTribePrefs prefs)

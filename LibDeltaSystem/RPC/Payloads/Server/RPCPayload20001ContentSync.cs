@@ -8,7 +8,7 @@ namespace LibDeltaSystem.RPC.Payloads.Server
     public class RPCPayload20001ContentSync : RPCPayload
     {
         public RPCSyncType type;
-        public object content;
+        public List<object> content;
         public int tribe_id;
         public DateTime time;
     }

@@ -43,7 +43,7 @@ namespace LibDeltaSystem.Tools
         /// <param name="conn"></param>
         /// <param name="user"></param>
         /// <returns></returns>
-        public static async Task SystemNotifyUserGroupReset(DeltaConnection conn, DbUser user)
+        public static void SystemNotifyUserGroupReset(DeltaConnection conn, DbUser user)
         {
             BaseClientCoreNetwork net = (BaseClientCoreNetwork)conn.network;
             net.RefreshUserIdGroups(user._id);
@@ -58,7 +58,7 @@ namespace LibDeltaSystem.Tools
         /// <param name="server_id"></param>
         /// <param name="tribe_id"></param>
         /// <returns></returns>
-        public static async Task SendDbContentUpdateMessage(DeltaConnection conn, RPCSyncType type, object data, ObjectId server_id, int tribe_id)
+        public static void SendDbContentUpdateMessage(DeltaConnection conn, RPCSyncType type, List<object> data, ObjectId server_id, int tribe_id)
         {
             //Create payload
             RPCPayload20001ContentSync payload = new RPCPayload20001ContentSync
@@ -215,10 +215,8 @@ namespace LibDeltaSystem.Tools
             //Create payload
             RPCPayload30002UserServerJoined payload = new RPCPayload30002UserServerJoined
             {
-                guild = await NetGuildUser.GetNetGuild(conn, guild, claimer),
-                cluster = NetCluster.GetCluster(await guild.GetClusterAsync(conn))
+                guild = await NetGuildUser.GetNetGuild(conn, guild, claimer)
             };
-
             
             //Send
             SendRPCMsgToUserID(conn, RPC.RPCOpcode.RPCPayload30002UserServerJoined, payload, claimer._id);
