@@ -10,7 +10,6 @@ namespace LibDeltaSystem.Entities.CommonNet
     {
         public string display_name;
         public string image_url;
-        public string owner_uid;
         public string cluster_id;
         public string id;
         public string map_id;
@@ -32,7 +31,6 @@ namespace LibDeltaSystem.Entities.CommonNet
             //Set
             display_name = server.display_name;
             image_url = server.image_url;
-            owner_uid = server.owner_uid?.ToString();
             cluster_id = server.cluster_id;
             id = server.id;
             map_id = server.latest_server_map;

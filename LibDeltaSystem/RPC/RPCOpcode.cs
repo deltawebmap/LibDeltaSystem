@@ -18,6 +18,7 @@ namespace LibDeltaSystem.RPC
         RPCServer20008ArkRpcAck = 20008,
         RPCServer20009LiveDinoUpdate = 20009,
         RPCServer20010GuildPublicDetailsChanged = 20010,
+        RPCServer20011OnlinePlayersUpdated = 20011,
 
         RPCPayload30001UserServerClaimed = 30001,
         RPCPayload30002UserServerJoined = 30002,

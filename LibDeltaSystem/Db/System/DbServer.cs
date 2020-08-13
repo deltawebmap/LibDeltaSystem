@@ -30,16 +30,6 @@ namespace LibDeltaSystem.Db.System
         public bool has_custom_image { get; set; }
 
         /// <summary>
-        /// ID of the owner of the server
-        /// </summary>
-        public ObjectId? owner_uid { get; set; }
-
-        /// <summary>
-        /// Does this have an owner?
-        /// </summary>
-        public bool is_claimed { get; set; }
-
-        /// <summary>
         /// Creds checked to verify the connection between the slave server.
         /// </summary>
         public string token { get; set; }
@@ -91,16 +81,6 @@ namespace LibDeltaSystem.Db.System
         public List<ObjectId> admins { get; set; } = new List<ObjectId>();
 
         /// <summary>
-        /// The time the last ARK client contacted the server on, represented in DateTime ticks
-        /// </summary>
-        public long last_client_connect_time { get; set; }
-
-        /// <summary>
-        /// The version the last ARK client that contacted this server was running
-        /// </summary>
-        public int last_client_version { get; set; }
-
-        /// <summary>
         /// In secure mode, admins cannot access other tribes data. This can help to ensure tribes that there is no admin abuse
         /// </summary>
         public bool secure_mode { get; set; }
@@ -119,6 +99,26 @@ namespace LibDeltaSystem.Db.System
         /// The permissions setup template to use
         /// </summary>
         public string permissions_template { get; set; } = "NORMAL";
+
+        /// <summary>
+        /// Last time this was connected to by the sync server
+        /// </summary>
+        public DateTime last_connected_time { get; set; }
+
+        /// <summary>
+        /// Last time this was pinged by the sync server
+        /// </summary>
+        public DateTime last_pinged_time { get; set; }
+
+        /// <summary>
+        /// The ID of the last sync state
+        /// </summary>
+        public ObjectId last_sync_state { get; set; }
+
+        /// <summary>
+        /// The version the last ARK client that contacted this server was running
+        /// </summary>
+        public int last_client_version { get; set; }
 
         /// <summary>
         /// Returns the player profile by ID
@@ -140,7 +140,7 @@ namespace LibDeltaSystem.Db.System
         /// <returns></returns>
         public bool CheckIsUserAdmin(DbUser user)
         {
-            return admins.Contains(user._id) || user._id == owner_uid;
+            return admins.Contains(user._id);
         }
 
         /// <summary>
@@ -150,12 +150,7 @@ namespace LibDeltaSystem.Db.System
         /// <returns></returns>
         public bool CheckIsUserAdmin(ObjectId user)
         {
-            return admins.Contains(user) || user == owner_uid;
-        }
-
-        public bool IsUserOwner(DbUser user)
-        {
-            return user._id == owner_uid;
+            return admins.Contains(user);
         }
 
         public async Task<ArkMapEntry> GetMapEntryAsync(DeltaConnection conn)
@@ -240,7 +235,7 @@ namespace LibDeltaSystem.Db.System
             var results = await conn.content_player_profiles.DeleteOneAsync(filter);
 
             //Notify of the person leaving if they aren't admin or owner
-            if(!admins.Contains(user._id) && owner_uid != user._id)
+            if(!admins.Contains(user._id))
                 await NotifyUserRemoved(conn, user);
 
             //Reset user groups
@@ -453,27 +448,6 @@ namespace LibDeltaSystem.Db.System
         }
 
         /// <summary>
-        /// Sets the owner of this server to a user ID
-        /// </summary>
-        /// <param name="conn"></param>
-        /// <param name="owner"></param>
-        /// <returns></returns>
-        public async Task ClaimServer(DeltaConnection conn, DbUser owner)
-        {
-            //Update
-            owner_uid = owner._id;
-            var builder = Builders<DbServer>.Update;
-            await ExplicitUpdateAsync(conn, builder.Set("owner_uid", owner._id).Set("is_claimed", true));
-
-            //Update here
-            owner_uid = owner._id;
-            is_claimed = true;
-
-            //Notify the user that a new server is now owned by them
-            await RPCMessageTool.SendUserServerClaimed(conn, owner, this);
-        }
-
-        /// <summary>
         /// Gets the cluster for this server
         /// </summary>
         /// <param name="conn"></param>
@@ -520,7 +494,7 @@ namespace LibDeltaSystem.Db.System
             RPCMessageTool.SystemNotifyUserGroupReset(conn, user); //Reset user groups
 
             //If this user doesn't have a profile and isn't owner, that means that they've lost access. Tell them that
-            if (await GetUserPlayerProfile(conn, user) == null && owner_uid != user._id)
+            if (await GetUserPlayerProfile(conn, user) == null)
                 await NotifyUserRemoved(conn, user);
 
             return true;
