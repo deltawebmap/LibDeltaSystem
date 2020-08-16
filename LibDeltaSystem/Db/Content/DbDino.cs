@@ -164,6 +164,21 @@ namespace LibDeltaSystem.Db.Content
         /// </summary>
         public bool is_alive { get; set; }
 
+        public static ulong ZipperDinoId(uint id1, uint id2)
+        {
+            byte[] buf = new byte[8];
+            BitConverter.GetBytes(id1).CopyTo(buf, 0);
+            BitConverter.GetBytes(id2).CopyTo(buf, 4);
+            return BitConverter.ToUInt64(buf, 0);
+        }
+
+        public static void UnzipperDinoId(ulong id, out uint id1, out uint id2)
+        {
+            byte[] buf = BitConverter.GetBytes(id);
+            id1 = BitConverter.ToUInt32(buf, 0);
+            id2 = BitConverter.ToUInt32(buf, 4);
+        }
+
         /// <summary>
         /// Gets a dinosaur by it's ID from a server
         /// </summary>
