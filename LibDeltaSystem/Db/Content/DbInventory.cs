@@ -70,7 +70,7 @@ namespace LibDeltaSystem.Db.Content
             /// <summary>
             /// Custom data indexes
             /// </summary>
-            public Dictionary<ushort, string> custom_data { get; set; }
+            public Dictionary<string, string> custom_data { get; set; }
         }
     }
 }

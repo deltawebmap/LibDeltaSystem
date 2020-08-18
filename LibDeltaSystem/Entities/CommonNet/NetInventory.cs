@@ -20,7 +20,7 @@ namespace LibDeltaSystem.Entities.CommonNet
             public float durability { get; set; }
             public int stack_size { get; set; }
             public ushort flags { get; set; }
-            public Dictionary<ushort, string> custom_data { get; set; }
+            public Dictionary<string, string> custom_data { get; set; }
 
             public static NetInventory_Item ConvertItem(DbInventory_InventoryItem item)
             {
