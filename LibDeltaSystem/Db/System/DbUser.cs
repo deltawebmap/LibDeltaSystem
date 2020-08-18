@@ -48,31 +48,6 @@ namespace LibDeltaSystem.Db.System
         public List<ObjectId> dismissed_alert_banners { get; set; } = new List<ObjectId>();
 
         /// <summary>
-        /// Returns a cursor to get alert banners
-        /// </summary>
-        /// <returns></returns>
-        public async Task<IAsyncCursor<DbAlertBanner>> GetAlertBanners(DeltaConnection conn, List<ObjectId> servers)
-        {
-            //Create query
-            var builder = Builders<DbAlertBanner>.Filter;
-            var query = (builder.Eq("target_user_id", _id) | builder.In("target_server_id", servers)) & !builder.In("_id", dismissed_alert_banners);
-            return await conn.system_alert_banners.FindAsync(query);
-        }
-
-        /// <summary>
-        /// Returns a cursor to get alert banners
-        /// </summary>
-        /// <returns></returns>
-        public async Task<IAsyncCursor<DbAlertBanner>> GetAlertBanners(DeltaConnection conn, List<DbServer> servers)
-        {
-            //Convert servers to ObjectIDs
-            List<ObjectId> ids = new List<ObjectId>();
-            foreach (var s in servers)
-                ids.Add(s._id);
-            return await GetAlertBanners(conn, ids);
-        }
-
-        /// <summary>
         /// Updates this in the database
         /// </summary>
         public void Update(DeltaConnection conn)

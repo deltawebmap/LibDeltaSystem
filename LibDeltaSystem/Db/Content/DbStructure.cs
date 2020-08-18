@@ -88,21 +88,6 @@ namespace LibDeltaSystem.Db.Content
             return items;
         }
 
-        public bool TryGetItemEntry(DeltaConnection conn, DeltaPrimalDataPackage package, out ItemEntry entry)
-        {
-            entry = null;
-            
-            //Lookup structure metadata
-            var metadata = conn.GetStructureMetadata().Where(x => x.names.Contains(classname)).FirstOrDefault();
-            if (metadata != null)
-            {
-                //Get the item used for this
-                entry = package.GetItemEntry(metadata.item);
-                return entry != null;
-            }
-            return false;
-        }
-
         public static async Task DeleteServerContent(DeltaConnection conn, ObjectId server_id)
         {
             var filter = Builders<DbStructure>.Filter.Eq("server_id", server_id);

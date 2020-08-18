@@ -153,11 +153,6 @@ namespace LibDeltaSystem.Db.System
             return admins.Contains(user);
         }
 
-        public async Task<ArkMapEntry> GetMapEntryAsync(DeltaConnection conn)
-        {
-            return await conn.GetARKMapByInternalName(latest_server_map);
-        }
-
         /// <summary>
         /// Checks a permission flag at a bit index
         /// </summary>
@@ -169,15 +164,24 @@ namespace LibDeltaSystem.Db.System
         }
 
         /// <summary>
-        /// Returns all permission flags as an array of bools
+        /// Chcks a flag at the index
+        /// </summary>
+        /// <param name="index"></param>
+        /// <returns></returns>
+        public bool CheckFlag(int index)
+        {
+            return ((flags >> index) & 1U) == 1;
+        }
+
+        public const int FLAG_INDEX_SETUP = 1;
+
+        /// <summary>
+        /// Reads the "requires setup" flag
         /// </summary>
         /// <returns></returns>
-        public bool[] GetPermissionFlagList()
+        public bool DoesServerRequireSetup()
         {
-            bool[] response = new bool[64];
-            for (int i = 0; i < response.Length; i++)
-                response[i] = CheckPermissionFlag(i);
-            return response;
+            return CheckFlag(FLAG_INDEX_SETUP);
         }
 
         /// <summary>
@@ -332,35 +336,6 @@ namespace LibDeltaSystem.Db.System
             return users;
         }
 
-        public string[] GetAllServerModIDs()
-        {
-            //Verify
-            if (game_settings == null)
-                return new string[0];
-            if (game_settings.ActiveMods == null)
-                return new string[0];
-            return game_settings.ActiveMods.Split(',');
-        }
-
-        public async Task<Dictionary<string, DbSteamModCache>> GetAllServerMods(DeltaConnection conn, bool includeFailed)
-        {
-            //Get mod IDs
-            string[] ids = GetAllServerModIDs();
-            
-            //Get all
-            Dictionary<string, DbSteamModCache> dict = new Dictionary<string, DbSteamModCache>();
-            foreach(var s in ids)
-            {
-                var data = await conn.GetSteamModById(s);
-                if (data != null)
-                    dict.Add(s, data);
-                else if (includeFailed)
-                    dict.Add(s, null);
-            }
-
-            return dict;
-        }
-
         /// <summary>
         /// Returns a placeholder icon
         /// </summary>
@@ -395,11 +370,6 @@ namespace LibDeltaSystem.Db.System
             return conn.config.hosts.assets_icon + "/legacy/placeholder_server_images/" + output + ".png";
         }
 
-        public bool IsUserAdmin(DbUser user)
-        {
-            return CheckIsUserAdmin(user);
-        }
-
         /// <summary>
         /// Gets user prefs for a saved user
         /// </summary>
@@ -428,37 +398,6 @@ namespace LibDeltaSystem.Db.System
             }
         }
 
-        /// <summary>
-        /// Updates the server and automatically sends RPC events
-        /// </summary>
-        /// <param name="update"></param>
-        /// <returns></returns>
-        public async Task UpdateAsync(DeltaConnection conn, UpdateDefinition<DbServer> update)
-        {
-            //Send update
-            var filterBuilder = Builders<DbServer>.Filter;
-            var filter = filterBuilder.Eq("_id", _id);
-            var result = await conn.system_servers.FindOneAndUpdateAsync(filter, update, new FindOneAndUpdateOptions<DbServer, DbServer>
-            {
-                ReturnDocument = ReturnDocument.After
-            });
-
-            //Send RPC events
-            await Tools.RPCMessageTool.SendGuildUpdate(conn, result);
-        }
-
-        /// <summary>
-        /// Gets the cluster for this server
-        /// </summary>
-        /// <param name="conn"></param>
-        /// <returns></returns>
-        public async Task<DbCluster> GetClusterAsync(DeltaConnection conn)
-        {
-            if (cluster_id == null)
-                return null;
-            return await DbCluster.GetClusterById(conn, ObjectId.Parse(cluster_id));
-        }
-
         public async Task ChangeSecureMode(DeltaConnection conn, bool secure)
         {
             //Update
@@ -476,6 +415,22 @@ namespace LibDeltaSystem.Db.System
 
             //Send RPC message
             RPCMessageTool.SendGuildPermissionChanged(conn, this);
+        }
+
+        public async Task AddAdmin(DeltaConnection conn, DbUser user)
+        {
+            //Add
+            if (admins.Contains(user._id))
+                return;
+            admins.Add(user._id);
+
+            //Update
+            await ExplicitUpdateAsync(conn, Builders<DbServer>.Update.Set("admins", admins));
+
+            //Send RPC message
+            RPCMessageTool.SendUserServerPermissionsChanged(conn, user._id, this); //Tell this user about the change
+            RPCMessageTool.SendGuildAdminListUpdated(conn, this); //Tell users on the server
+            RPCMessageTool.SystemNotifyUserGroupReset(conn, user); //Reset user groups
         }
 
         public async Task<bool> RemoveAdmin(DeltaConnection conn, DbUser user)
@@ -527,26 +482,5 @@ namespace LibDeltaSystem.Db.System
         {
             await RPCMessageTool.SendGuildPublicDetailsChanged(conn, this);
         }
-    }
-
-    /// <summary>
-    /// Settings for local clients
-    /// </summary>
-    public class DbServer_LoadSettings
-    {
-        /// <summary>
-        /// The pathname to the save directory. Always ends with / or \.
-        /// </summary>
-        public string save_pathname { get; set; }
-
-        /// <summary>
-        /// The .ark file to load, relative to save_pathname. Example: "Extinction.ark"
-        /// </summary>
-        public string save_map_name { get; set; }
-
-        /// <summary>
-        /// Path to the config name.
-        /// </summary>
-        public string config_pathname { get; set; }
     }
 }

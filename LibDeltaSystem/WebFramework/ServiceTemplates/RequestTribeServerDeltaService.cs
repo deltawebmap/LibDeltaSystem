@@ -40,7 +40,7 @@ namespace LibDeltaSystem.WebFramework.ServiceTemplates
 
             //Get the player profile
             profile = await server.GetUserPlayerProfile(conn, user);
-            admin = server.IsUserAdmin(user);
+            admin = server.CheckIsUserAdmin(user);
             canRequestOtherTribes = admin && !server.secure_mode;
 
             //If no profile was found, this user doesn't even have access to this server

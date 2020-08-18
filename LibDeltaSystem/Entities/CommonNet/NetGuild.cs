@@ -22,12 +22,6 @@ namespace LibDeltaSystem.Entities.CommonNet
 
         public async Task SetServerData(DeltaConnection conn, DbServer server)
         {
-            //Get map info
-            string mapName = null;
-            var mapData = await server.GetMapEntryAsync(conn);
-            if (mapData != null)
-                mapName = mapData.displayName;
-
             //Set
             display_name = server.display_name;
             image_url = server.image_url;

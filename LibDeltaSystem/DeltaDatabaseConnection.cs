@@ -1,7 +1,6 @@
 ﻿using LibDeltaSystem.Db.ArkEntries;
 using LibDeltaSystem.Db.Content;
 using LibDeltaSystem.Db.System;
-using LibDeltaSystem.Db.System.Analytics;
 using LibDeltaSystem.Entities.ArkEntries;
 using LibDeltaSystem.Entities.ArkEntries.Dinosaur;
 using MongoDB.Bson;
@@ -32,22 +31,18 @@ namespace LibDeltaSystem
         public IMongoCollection<DbPlayerProfile> content_player_profiles;
         public IMongoCollection<DbStructure> content_structures;
         public IMongoCollection<DbTribeLogEntry> content_tribe_log;
-        public IMongoCollection<DbEgg> content_eggs;
 
         public IMongoCollection<DbUser> system_users;
         public IMongoCollection<DbToken> system_tokens;
         public IMongoCollection<DbServer> system_servers;
         public IMongoCollection<DbSteamCache> system_steam_cache;
         public IMongoCollection<DbSteamModCache> system_steam_mod_cache;
-        public IMongoCollection<DbErrorLog> system_error_log;
         public IMongoCollection<DbPreregisteredUser> system_preregistered;
         public IMongoCollection<DbSavedUserServerPrefs> system_saved_user_server_prefs;
         public IMongoCollection<DbCanvas> system_canvases;
         public IMongoCollection<DbSyncSavedState> system_sync_states;
         public IMongoCollection<DbOauthApp> system_oauth_apps;
         public IMongoCollection<DbCluster> system_clusters;
-        public IMongoCollection<DbModTimeAnalyticsObject> system_analytics_time;
-        public IMongoCollection<DbAlertBanner> system_alert_banners;
         public IMongoCollection<DbQueuedSyncRequest> system_queued_sync_commands;
         public IMongoCollection<DbBetaKey> system_beta_keys;
         public IMongoCollection<DbAuthenticationSession> system_auth_sessions;
@@ -84,7 +79,6 @@ namespace LibDeltaSystem
             content_player_profiles = content_database.GetCollection<DbPlayerProfile>("player_profiles");
             content_structures = content_database.GetCollection<DbStructure>("structures");
             content_tribe_log = content_database.GetCollection<DbTribeLogEntry>("tribe_log_entries");
-            content_eggs = content_database.GetCollection<DbEgg>("eggs");
 
             system_database = content_client.GetDatabase("delta-" + mongoEnv + "-system");
             system_users = system_database.GetCollection<DbUser>("users");
@@ -92,15 +86,12 @@ namespace LibDeltaSystem
             system_servers = system_database.GetCollection<DbServer>("servers");
             system_steam_cache = system_database.GetCollection<DbSteamCache>("steam_cache");
             system_steam_mod_cache = system_database.GetCollection<DbSteamModCache>("steam_mod_cache");
-            system_error_log = system_database.GetCollection<DbErrorLog>("error_log");
             system_preregistered = system_database.GetCollection<DbPreregisteredUser>("preregistered_users");
             system_saved_user_server_prefs = system_database.GetCollection<DbSavedUserServerPrefs>("saved_user_server_prefs");
             system_canvases = system_database.GetCollection<DbCanvas>("canvases");
             system_sync_states = system_database.GetCollection<DbSyncSavedState>("sync_states");
             system_oauth_apps = system_database.GetCollection<DbOauthApp>("oauth_apps");
             system_clusters = system_database.GetCollection<DbCluster>("clusters");
-            system_analytics_time = system_database.GetCollection<DbModTimeAnalyticsObject>("analytics_time");
-            system_alert_banners = system_database.GetCollection<DbAlertBanner>("alert_banners");
             system_queued_sync_commands = system_database.GetCollection<DbQueuedSyncRequest>("queued_sync_commands");
             system_beta_keys = system_database.GetCollection<DbBetaKey>("beta_keys");
             system_auth_sessions = system_database.GetCollection<DbAuthenticationSession>("auth_sessions");

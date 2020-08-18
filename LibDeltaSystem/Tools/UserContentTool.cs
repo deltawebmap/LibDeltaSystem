@@ -22,7 +22,7 @@ namespace LibDeltaSystem.Tools
         public static async Task<string> UploadUserContent(DeltaConnection conn, Stream data)
         {
             //Get creds
-            var credential = GoogleCredential.FromFile(conn.config.firebase_config);
+            var credential = GoogleCredential.FromFile(conn.GetUserConfigPath(DeltaConnection.CONFIGNAME_FIREBASE));
             var client = StorageClient.Create(credential);
 
             //Generate a unique ID

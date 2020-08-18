@@ -6,17 +6,14 @@ namespace LibDeltaSystem
 {
     public class DeltaConnectionConfig
     {
+        public int version; //Version of the config
         public string env;
-
         public string mongodb_connection;  //MongoDB connection string
-
         public int steam_cache_expire_minutes; //Number of minutes before a steam profile expires
         public string steam_api_token;
-
-        public string structure_metadata_config;
-
-        public string firebase_config;
+        public string configs_location; //Folder containing configs
         public string firebase_uc_bucket;
+        public bool log; //If set to false, no remote logging will happen for error levels less than high. No error levels will be written to stdout
 
         public DeltaConnectionConfig_Hosts hosts;
     }

@@ -4,7 +4,6 @@ using LibDeltaSystem.CoreHub.CoreNetwork.CoreNetworkServerList;
 using LibDeltaSystem.Db.ArkEntries;
 using LibDeltaSystem.Db.Content;
 using LibDeltaSystem.Db.System;
-using LibDeltaSystem.Db.System.Analytics;
 using LibDeltaSystem.Db.System.Entities;
 using LibDeltaSystem.Entities;
 using LibDeltaSystem.Entities.ArkEntries;
@@ -27,7 +26,9 @@ namespace LibDeltaSystem
     public class DeltaConnection : DeltaDatabaseConnection
     {
         public const byte LIB_VERSION_MAJOR = 0;
-        public const byte LIB_VERSION_MINOR = 19;
+        public const byte LIB_VERSION_MINOR = 20;
+
+        public const int CONFIG_VERSION_LATEST = 2;
 
         public DeltaConnectionConfig config;
         public HttpClient http;
@@ -46,6 +47,8 @@ namespace LibDeltaSystem
             if (!File.Exists(pathname))
                 throw new Exception("Delta config file was not found! Requested location: "+pathname);
             config = JsonConvert.DeserializeObject<DeltaConnectionConfig>(File.ReadAllText(pathname));
+            if (config.version < CONFIG_VERSION_LATEST)
+                throw new Exception("Config is out of date! Please update it's formatting and version.");
             this.http = new HttpClient();
             this.system_version_major = system_version_major;
             this.system_version_minor = system_version_minor;
@@ -65,12 +68,15 @@ namespace LibDeltaSystem
         /// <returns></returns>
         public static DeltaConnection InitDeltaManagedApp(string[] startupArgs, byte system_version_major, byte system_version_minor, BaseClientCoreNetwork network)
         {
-            //Write
-            Console.WriteLine($"[LibDeltaSystem] Starting Delta managed app on version {system_version_major}.{system_version_minor} (lib version {LIB_VERSION_MAJOR}.{LIB_VERSION_MINOR})");
-            
             //Validate
             if (startupArgs.Length != 2)
                 throw new Exception("The startup args are not valid. This program is supposed to be run from a Delta Process Manager.");
+
+            //Log
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine($"Starting Delta managed app on version {system_version_major}.{system_version_minor} (lib version {LIB_VERSION_MAJOR}.{LIB_VERSION_MINOR})...");
+            Console.WriteLine($"Using config at {startupArgs[0]} with server ID {startupArgs[1]}.");
+            Console.ForegroundColor = ConsoleColor.White;
 
             //Create
             var d = new DeltaConnection(startupArgs[0], ushort.Parse(startupArgs[1]), system_version_major, system_version_minor, network);
@@ -81,10 +87,67 @@ namespace LibDeltaSystem
             return d;
         }
 
+        /// <summary>
+        /// Returns a port specified to this application
+        /// </summary>
+        /// <param name="index"></param>
+        /// <returns></returns>
         public int GetUserPort(int index)
         {
             return me.ports[index];
         }
+
+        /// <summary>
+        /// Loads a config file with the specified name from the config path 
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="name"></param>
+        /// <returns></returns>
+        public T GetUserConfig<T>(string name)
+        {
+            //Read text
+            string content = File.ReadAllText(GetUserConfigPath(name));
+
+            //Deserialize
+            return JsonConvert.DeserializeObject<T>(content);
+        }
+
+        /// <summary>
+        /// Loads a user config if it exists. If it doesn't, the default is returned and also written to disk
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="name"></param>
+        /// <param name="defaultValue"></param>
+        /// <returns></returns>
+        public T GetUserConfigDefault<T>(string name, T defaultValue)
+        {
+            //Get the location
+            string path = GetUserConfigPath(name);
+
+            //Check if it exists
+            if (File.Exists(path))
+                return GetUserConfig<T>(name);
+
+            //Write default to the disk
+            Log("GetUserConfigDefault", $"Requested config file \"{name}\", but it didn't exist. One has been created on the disk.", DeltaLogLevel.High);
+            File.WriteAllText(path, JsonConvert.SerializeObject(defaultValue, Formatting.Indented));
+
+            //Return default
+            return defaultValue;
+        }
+
+        /// <summary>
+        /// Returns a pathname to a user config
+        /// </summary>
+        /// <param name="name"></param>
+        /// <returns></returns>
+        public string GetUserConfigPath(string name)
+        {
+            return config.configs_location + name;
+        }
+
+        public const string CONFIGNAME_STRUCTURE_METADATA = "structure_metadata.json";
+        public const string CONFIGNAME_FIREBASE = "firebase_config.json";
 
         /// <summary>
         /// Connects and sets up databases
@@ -109,40 +172,35 @@ namespace LibDeltaSystem
 
         public void Log(string topic, string message, DeltaLogLevel level)
         {
-            //Translate level to console color
-            switch(level)
+            //Log to stdout
+            if(config.log)
             {
-                case DeltaLogLevel.Debug: Console.ForegroundColor = ConsoleColor.Cyan; break;
-                case DeltaLogLevel.Low: Console.ForegroundColor = ConsoleColor.White; break;
-                case DeltaLogLevel.Medium: Console.ForegroundColor = ConsoleColor.Yellow; break;
-                case DeltaLogLevel.High: Console.ForegroundColor = ConsoleColor.Red; break;
-                case DeltaLogLevel.Alert: Console.ForegroundColor = ConsoleColor.White; Console.BackgroundColor = ConsoleColor.Red; break;
+                //Translate level to console color
+                switch (level)
+                {
+                    case DeltaLogLevel.Debug: Console.ForegroundColor = ConsoleColor.Cyan; break;
+                    case DeltaLogLevel.Low: Console.ForegroundColor = ConsoleColor.White; break;
+                    case DeltaLogLevel.Medium: Console.ForegroundColor = ConsoleColor.Yellow; break;
+                    case DeltaLogLevel.High: Console.ForegroundColor = ConsoleColor.Red; break;
+                    case DeltaLogLevel.Alert: Console.ForegroundColor = ConsoleColor.White; Console.BackgroundColor = ConsoleColor.Red; break;
+                }
+
+                //Write
+                Console.WriteLine($"[{topic}] {message}");
+
+                //Reset
+                Console.ForegroundColor = ConsoleColor.White;
+                Console.BackgroundColor = ConsoleColor.Black;
             }
 
-            //Log
-            Console.WriteLine($"[{topic}] {message}");
-
-            //Reset
-            Console.ForegroundColor = ConsoleColor.White;
-            Console.BackgroundColor = ConsoleColor.Black;
-
             //Remote log
-            network.RemoteLog(topic, message, level);
+            if(config.log || (int)level >= (int)DeltaLogLevel.High)
+                network.RemoteLog(topic, message, level);
         }
 
         public void AttachWebServer(DeltaWebServer server)
         {
             this.web_server = server;
-        }
-
-        /// <summary>
-        /// Gets a new primal data package with the mods required
-        /// </summary>
-        /// <param name="mods"></param>
-        /// <returns></returns>
-        public async Task<DeltaPrimalDataPackage> GetPrimalDataPackage(string[] mods)
-        {
-            return new DeltaPrimalDataPackage(mods, this);
         }
         
         /// <summary>
@@ -164,7 +222,7 @@ namespace LibDeltaSystem
             //Create a new RPC if needed
             if(_structureMetadatas == null)
             {
-                _structureMetadatas = JsonConvert.DeserializeObject<List<StructureMetadata>>(File.ReadAllText(config.structure_metadata_config));
+                _structureMetadatas = GetUserConfig<List<StructureMetadata>>(CONFIGNAME_STRUCTURE_METADATA);
                 _supportedStructureMetadatas = new List<string>();
                 foreach (var s in _structureMetadatas)
                     _supportedStructureMetadatas.AddRange(s.names);
