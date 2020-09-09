@@ -36,13 +36,19 @@ namespace LibDeltaSystem.WebFramework
         /// Called before args are created. Do authorization here. Return false to fail
         /// </summary>
         /// <returns></returns>
-        public abstract Task<bool> OnPreRequest();
+        public virtual async Task<bool> OnPreRequest()
+        {
+            return true;
+        }
 
         /// <summary>
         /// Sets args that were passed via URL. Keys are defined in the definition
         /// </summary>
         /// <param name="args"></param>
-        public abstract Task<bool> SetArgs(Dictionary<string, string> args);
+        public virtual async Task<bool> SetArgs(Dictionary<string, string> args)
+        {
+            return true;
+        }
 
         /// <summary>
         /// Handles the actual request
@@ -100,7 +106,7 @@ namespace LibDeltaSystem.WebFramework
                 ok = ok
             });
         }
-        
+
         /// <summary>
         /// Decodes the request data
         /// </summary>

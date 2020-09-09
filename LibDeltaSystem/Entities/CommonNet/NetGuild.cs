@@ -16,6 +16,7 @@ namespace LibDeltaSystem.Entities.CommonNet
         public int permission_flags;
         public int flags;
         public string permissions_template;
+        public string[] mods;
 
         public bool secure_mode;
         public DateTime last_secure_mode_toggled;
@@ -33,6 +34,7 @@ namespace LibDeltaSystem.Entities.CommonNet
             permission_flags = server.permission_flags;
             flags = server.flags;
             permissions_template = server.permissions_template;
+            mods = server.mods;
         }
 
         public static async Task<NetGuildUser> GetGuild(DeltaConnection conn, DbServer server)
