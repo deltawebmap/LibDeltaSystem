@@ -38,6 +38,11 @@ namespace LibDeltaSystem.Db.ArkEntries
         /// </summary>
         public long last_updated { get; set; }
 
+        /// <summary>
+        /// A user-defined string that is displayed to the user.
+        /// </summary>
+        public string display_name { get; set; }
+
         public async Task UpdateModifiedTimeAsync(DeltaDatabaseConnection conn)
         {
             var filterBuilder = Builders<DbPrimalPackage>.Filter;
