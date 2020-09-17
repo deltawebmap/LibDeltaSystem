@@ -14,6 +14,7 @@ namespace LibDeltaSystem
         public string configs_location; //Folder containing configs
         public string firebase_uc_bucket;
         public bool log; //If set to false, no remote logging will happen for error levels less than high. No error levels will be written to stdout
+        public string steam_token_key; //A random key to sign Steam ID lookup tokens with. This should be 16 bytes in size
 
         public DeltaConnectionConfig_Hosts hosts;
     }

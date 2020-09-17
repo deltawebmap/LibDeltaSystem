@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
+using System.Security.Cryptography;
 
 namespace LibDeltaSystem
 {
@@ -67,6 +68,7 @@ namespace LibDeltaSystem
 
         public void OpenDatabase(string mongoConnection, string mongoEnv)
         {
+            //Open MongoDB
             content_client = new MongoClient(
                 mongoConnection
             );

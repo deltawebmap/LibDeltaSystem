@@ -12,9 +12,7 @@ namespace LibDeltaSystem.RPC.Payloads.Server
         public class OnlinePlayer
         {
             public int tribe_id;
-            public string steam_name;
-            public string steam_icon;
-            public string steam_id;
+            public string steam_token;
         }
     }
 }

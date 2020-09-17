@@ -18,6 +18,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -26,12 +27,14 @@ namespace LibDeltaSystem
     public class DeltaConnection : DeltaDatabaseConnection
     {
         public const byte LIB_VERSION_MAJOR = 0;
-        public const byte LIB_VERSION_MINOR = 24;
+        public const byte LIB_VERSION_MINOR = 25;
 
         public const int CONFIG_VERSION_LATEST = 2;
 
         public DeltaConnectionConfig config;
         public HttpClient http;
+
+        private byte[] steamTokenKey;
 
         public ushort server_id;
         public byte system_version_minor;
@@ -49,6 +52,9 @@ namespace LibDeltaSystem
             config = JsonConvert.DeserializeObject<DeltaConnectionConfig>(File.ReadAllText(pathname));
             if (config.version < CONFIG_VERSION_LATEST)
                 throw new Exception("Config is out of date! Please update it's formatting and version.");
+            this.steamTokenKey = Convert.FromBase64String(config.steam_token_key);
+            if (steamTokenKey.Length != 16)
+                throw new Exception("steam_token_key in the config should be 16 bytes of random data encoded as Base64");
             this.http = new HttpClient();
             this.system_version_major = system_version_major;
             this.system_version_minor = system_version_minor;
@@ -407,6 +413,70 @@ namespace LibDeltaSystem
                 }
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Produces a token for a specific Steam ID. This token is signed by this server to prevent abuse. It can be checked later by any DeltaWebMap server.
+        /// </summary>
+        /// <returns></returns>
+        public string CreateSteamIdTokenString(string steamId)
+        {
+            //Create a buffer for the message
+            byte[] buffer = new byte[16 + 1 + Encoding.ASCII.GetByteCount(steamId)];
+
+            //Write buffer contents
+            steamTokenKey.CopyTo(buffer, 0);
+            buffer[16] = 0x01;
+            Encoding.ASCII.GetBytes(steamId, 0, steamId.Length, buffer, 17);
+
+            //Create HMAC and write it
+            byte[] hash = new HMACMD5(steamTokenKey).ComputeHash(buffer);
+            if (hash.Length != 16)
+                throw new Exception("Invalid hash length.");
+            hash.CopyTo(buffer, 0);
+
+            //Return the BASE64 version of this
+            return Convert.ToBase64String(buffer);
+        }
+
+        /// <summary>
+        /// Reads the data encoded by the CreateSteamIdTokenString function
+        /// </summary>
+        /// <param name="encoded"></param>
+        public SteamIdToken ReadSteamIdTokenString(string encoded)
+        {
+            //Read as bytes
+            byte[] data;
+            try
+            {
+                data = Convert.FromBase64String(encoded);
+            } catch
+            {
+                return null;
+            }
+
+            //Validate
+            if (data.Length < 16 + 1)
+                return null;
+
+            //Read the hash
+            byte[] hash = new byte[16];
+            Array.Copy(data, 0, hash, 0, 16);
+
+            //Get the HMAC of this
+            steamTokenKey.CopyTo(data, 0);
+            byte[] challengeHash = new HMACMD5(steamTokenKey).ComputeHash(data);
+
+            //Validate
+            if (!BinaryTool.CompareBytes(hash, challengeHash))
+                return null;
+
+            //Data OK! Read it now
+            return new SteamIdToken
+            {
+                version = data[16],
+                steam_id = Encoding.ASCII.GetString(data, 17, data.Length - 17)
+            };
         }
     }
 }
