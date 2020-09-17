@@ -21,13 +21,14 @@ using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using System.Web;
 
 namespace LibDeltaSystem
 {
     public class DeltaConnection : DeltaDatabaseConnection
     {
         public const byte LIB_VERSION_MAJOR = 0;
-        public const byte LIB_VERSION_MINOR = 25;
+        public const byte LIB_VERSION_MINOR = 26;
 
         public const int CONFIG_VERSION_LATEST = 2;
 
@@ -237,6 +238,101 @@ namespace LibDeltaSystem
         }
 
         private Dictionary<string, DbSteamCache> memory_steam_cache = new Dictionary<string, DbSteamCache>();
+
+        public async Task<Dictionary<string, DbSteamCache>> BulkGetSteamProfiles(List<string> ids)
+        {
+            //Make sure there aren't too many
+            if (ids.Count > 50)
+                throw new Exception("A maxiumum of 50 profiles is allowed.");
+
+            //Create a dict for this
+            Dictionary<string, DbSteamCache> profiles = new Dictionary<string, DbSteamCache>();
+
+            //Search for items in cache
+            List<DbSteamCache> cacheHits;
+            {
+                var filterBuilder = Builders<DbSteamCache>.Filter;
+                var filter = filterBuilder.AnyIn("steam_id", ids) & filterBuilder.Lt("time_utc", DateTime.UtcNow.AddMinutes(config.steam_cache_expire_minutes).Ticks);
+                cacheHits = await (await system_steam_cache.FindAsync(filter)).ToListAsync();
+            }
+            foreach(var r in cacheHits)
+            {
+                if(!profiles.ContainsKey(r.steam_id))
+                    profiles.Add(r.steam_id, r);
+            }
+
+            //Check if we've found all already
+            if (profiles.Count == ids.Count)
+                return profiles;
+
+            //Build the Steam request url
+            string steamRequestUrl = "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=" + config.steam_api_token + "&steamids=";
+            int steamRequestCount = 0;
+            foreach(string s in ids)
+            {
+                //Skip if this was hit in the cache
+                if (profiles.ContainsKey(s))
+                    continue;
+
+                //Add comma if needed
+                if (steamRequestCount != 0)
+                    steamRequestUrl += ",";
+
+                //Add
+                steamRequestCount++;
+                steamRequestUrl += HttpUtility.UrlEncode(s);
+            }
+
+            //Hit Steam if we did not find all
+            if(steamRequestCount > 0)
+            {
+                //We'll fetch updated Steam info
+                SteamProfile_Full steamHits;
+                try
+                {
+                    var response = await http.GetAsync(steamRequestUrl);
+                    if (!response.IsSuccessStatusCode)
+                        throw new Exception();
+                    steamHits = JsonConvert.DeserializeObject<SteamProfile_Full>(await response.Content.ReadAsStringAsync());
+                }
+                catch
+                {
+                    return profiles;
+                }
+
+                //Add each hit
+                foreach (var profileData in steamHits.response.players)
+                {
+                    //Create a profile object
+                    var profile = new DbSteamCache
+                    {
+                        icon_url = profileData.avatarfull,
+                        name = profileData.personaname,
+                        profile_url = profileData.profileurl,
+                        steam_id = profileData.steamid,
+                        time_utc = DateTime.UtcNow.Ticks
+                    };
+
+                    //Insert into database cache for future use
+                    {
+                        var filterBuilder = Builders<DbSteamCache>.Filter;
+                        var filter = filterBuilder.Eq("steam_id", profileData.steamid);
+                        var response = await system_steam_cache.FindOneAndReplaceAsync<DbSteamCache>(filter, profile, new FindOneAndReplaceOptions<DbSteamCache, DbSteamCache>
+                        {
+                            IsUpsert = true,
+                            ReturnDocument = ReturnDocument.After
+                        });
+                        profile._id = response._id;
+                    }
+
+                    //Add
+                    if (!profiles.ContainsKey(profile.steam_id))
+                        profiles.Add(profile.steam_id, profile);
+                }
+            }
+
+            return profiles;
+        }
 
         /// <summary>
         /// Gets or downloads the Steam profile. The only time this will ever return null is if Steam can't find the user.
