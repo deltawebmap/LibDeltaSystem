@@ -252,7 +252,7 @@ namespace LibDeltaSystem
             List<DbSteamCache> cacheHits;
             {
                 var filterBuilder = Builders<DbSteamCache>.Filter;
-                var filter = filterBuilder.AnyIn("steam_id", ids) & filterBuilder.Lt("time_utc", DateTime.UtcNow.AddMinutes(config.steam_cache_expire_minutes).Ticks);
+                var filter = filterBuilder.In("steam_id", ids) & filterBuilder.Lt("time_utc", DateTime.UtcNow.AddMinutes(config.steam_cache_expire_minutes).Ticks);
                 cacheHits = await (await system_steam_cache.FindAsync(filter)).ToListAsync();
             }
             foreach(var r in cacheHits)
