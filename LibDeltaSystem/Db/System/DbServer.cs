@@ -367,7 +367,7 @@ namespace LibDeltaSystem.Db.System
             }
 
             //Now, return URL
-            return conn.config.hosts.assets_icon + "/legacy/placeholder_server_images/" + output + ".png";
+            return conn.hosts.assets_icon + "/legacy/placeholder_server_images/" + output + ".png";
         }
 
         /// <summary>

@@ -1,6 +1,5 @@
-﻿using LibDeltaSystem.CoreHub;
-using LibDeltaSystem.CoreHub.CoreNetwork;
-using LibDeltaSystem.CoreHub.CoreNetwork.CoreNetworkServerList;
+﻿using LibDeltaSystem.CoreNet;
+using LibDeltaSystem.CoreNet.NetMessages;
 using LibDeltaSystem.Db.ArkEntries;
 using LibDeltaSystem.Db.Content;
 using LibDeltaSystem.Db.System;
@@ -17,6 +16,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
@@ -25,44 +25,99 @@ using System.Web;
 
 namespace LibDeltaSystem
 {
-    public class DeltaConnection : DeltaDatabaseConnection
+    public class DeltaConnection : DeltaDatabaseConnection, IDeltaLogger
     {
-        public const byte LIB_VERSION_MAJOR = 0;
-        public const byte LIB_VERSION_MINOR = 26;
+        public const byte LIB_VERSION_MAJOR = 1;
+        public const byte LIB_VERSION_MINOR = 1;
 
-        public const int CONFIG_VERSION_LATEST = 2;
-
-        public DeltaConnectionConfig config;
+        public RouterConnection net;
+        public string instanceId;
         public HttpClient http;
 
-        private byte[] steamTokenKey;
-
-        public ushort server_id;
+        public DeltaCoreNetServerType server_type;
         public byte system_version_minor;
         public byte system_version_major;
-        public BaseClientCoreNetwork network;
-        public DbSystemServer me;
-        public DateTime start_time;
-        public Random rand;
-        public DeltaWebServer web_server;
 
-        public DeltaConnection(string pathname, ushort server_id, byte system_version_major, byte system_version_minor, BaseClientCoreNetwork network)
+        public LoginServerConfigHosts hosts;
+        public bool loggingEnabled;
+        public string steamApiKey;
+        public int steamCacheExpireMinutes;
+        public byte[] steamTokenKey;
+        public int[] userPorts;
+        public string firebaseUcBucket;
+        public string enviornment;
+
+        public DeltaConnection(int router_port, long router_key, byte system_version_major, byte system_version_minor, DeltaCoreNetServerType server_type)
         {
-            if (!File.Exists(pathname))
-                throw new Exception("Delta config file was not found! Requested location: "+pathname);
-            config = JsonConvert.DeserializeObject<DeltaConnectionConfig>(File.ReadAllText(pathname));
-            if (config.version < CONFIG_VERSION_LATEST)
-                throw new Exception("Config is out of date! Please update it's formatting and version.");
-            this.steamTokenKey = Convert.FromBase64String(config.steam_token_key);
-            if (steamTokenKey.Length != 16)
-                throw new Exception("steam_token_key in the config should be 16 bytes of random data encoded as Base64");
+            //Set vars
             this.http = new HttpClient();
             this.system_version_major = system_version_major;
             this.system_version_minor = system_version_minor;
-            this.server_id = server_id;
-            this.network = network;
-            this.start_time = DateTime.UtcNow;
-            this.rand = new Random();
+            this.server_type = server_type;
+
+            //Open network if it isn't disabled
+            if(router_port != -1)
+                net = new RouterConnection(new IPEndPoint(IPAddress.Loopback, router_port), router_key, this);
+        }
+
+        /// <summary>
+        /// Initializes the session online, connected to a router server
+        /// </summary>
+        /// <returns></returns>
+        public async Task InitNetworked()
+        {
+            //Wait for login to succeed.
+            Log("Init", "Login packet sent, waiting for router to respond...", DeltaLogLevel.Medium);
+            while (!net.loggedIn) ;
+
+            //Request config
+            Log("Init", "Login succeeded. Requesting config, waiting for router to respond...", DeltaLogLevel.Medium);
+            var loginDetails = await net.RequestConfig();
+
+            //Make sure login was successful
+            if (!loginDetails.success)
+                throw new Exception("Failed to request config. Server rejected our request.");
+
+            //Set config
+            enviornment = loginDetails.config.enviornment;
+            loggingEnabled = loginDetails.config.log;
+            steamApiKey = loginDetails.config.steam_api_key;
+            steamCacheExpireMinutes = loginDetails.config.steam_cache_expire_minutes;
+            firebaseUcBucket = loginDetails.config.firebase_uc_bucket;
+            steamTokenKey = Convert.FromBase64String(loginDetails.config.steam_token_key);
+            userPorts = loginDetails.user_ports;
+            instanceId = loginDetails.instance_id;
+            hosts = loginDetails.config.hosts;
+
+            //Connect to database
+            OpenDatabase(loginDetails.config.mongodb_connection, loginDetails.config.enviornment);
+
+            //Log
+            Log("Init", $"Init succeeded. Connected with instance ID {loginDetails.instance_id}.", DeltaLogLevel.Medium);
+        }
+
+        /// <summary>
+        /// Initializes the session offline, or not connected to any router server
+        /// </summary>
+        /// <returns></returns>
+        public async Task InitOffline(LoginServerConfig config, int[] ports)
+        {
+            //Set config
+            enviornment = config.enviornment;
+            loggingEnabled = config.log;
+            steamApiKey = config.steam_api_key;
+            steamCacheExpireMinutes = config.steam_cache_expire_minutes;
+            firebaseUcBucket = config.firebase_uc_bucket;
+            steamTokenKey = Convert.FromBase64String(config.steam_token_key);
+            userPorts = ports;
+            instanceId = "OFFLINE_INSTANCE";
+            hosts = config.hosts;
+
+            //Connect to database
+            OpenDatabase(config.mongodb_connection, config.enviornment);
+
+            //Log
+            Log("Init", $"Init succeeded. Running offline.", DeltaLogLevel.Medium);
         }
 
         /// <summary>
@@ -73,7 +128,7 @@ namespace LibDeltaSystem
         /// <param name="system_version_minor"></param>
         /// <param name="network"></param>
         /// <returns></returns>
-        public static DeltaConnection InitDeltaManagedApp(string[] startupArgs, byte system_version_major, byte system_version_minor, BaseClientCoreNetwork network)
+        public static DeltaConnection InitDeltaManagedApp(string[] startupArgs, DeltaCoreNetServerType server_type, byte system_version_major, byte system_version_minor)
         {
             //Validate
             if (startupArgs.Length != 2)
@@ -82,14 +137,13 @@ namespace LibDeltaSystem
             //Log
             Console.ForegroundColor = ConsoleColor.Cyan;
             Console.WriteLine($"Starting Delta managed app on version {system_version_major}.{system_version_minor} (lib version {LIB_VERSION_MAJOR}.{LIB_VERSION_MINOR})...");
-            Console.WriteLine($"Using config at {startupArgs[0]} with server ID {startupArgs[1]}.");
             Console.ForegroundColor = ConsoleColor.White;
 
             //Create
-            var d = new DeltaConnection(startupArgs[0], ushort.Parse(startupArgs[1]), system_version_major, system_version_minor, network);
+            var d = new DeltaConnection(int.Parse(startupArgs[0]), long.Parse(startupArgs[1]), system_version_major, system_version_minor, server_type);
 
             //Connect
-            d.Connect().GetAwaiter().GetResult();
+            d.InitNetworked().GetAwaiter().GetResult();
 
             return d;
         }
@@ -101,22 +155,7 @@ namespace LibDeltaSystem
         /// <returns></returns>
         public int GetUserPort(int index)
         {
-            return me.ports[index];
-        }
-
-        /// <summary>
-        /// Loads a config file with the specified name from the config path 
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="name"></param>
-        /// <returns></returns>
-        public T GetUserConfig<T>(string name)
-        {
-            //Read text
-            string content = File.ReadAllText(GetUserConfigPath(name));
-
-            //Deserialize
-            return JsonConvert.DeserializeObject<T>(content);
+            return userPorts[index];
         }
 
         /// <summary>
@@ -126,61 +165,30 @@ namespace LibDeltaSystem
         /// <param name="name"></param>
         /// <param name="defaultValue"></param>
         /// <returns></returns>
-        public T GetUserConfigDefault<T>(string name, T defaultValue)
+        public async Task<T> GetUserConfig<T>(string name, T defaultValue)
         {
-            //Get the location
-            string path = GetUserConfigPath(name);
+            //Serialize default value to send
+            string defaultValueSer = JsonConvert.SerializeObject(defaultValue, Formatting.Indented);
 
-            //Check if it exists
-            if (File.Exists(path))
-                return GetUserConfig<T>(name);
+            //Get
+            string cfg = await GetUserConfigString(name, defaultValueSer);
 
-            //Write default to the disk
-            Log("GetUserConfigDefault", $"Requested config file \"{name}\", but it didn't exist. One has been created on the disk.", DeltaLogLevel.High);
-            File.WriteAllText(path, JsonConvert.SerializeObject(defaultValue, Formatting.Indented));
-
-            //Return default
-            return defaultValue;
+            //Deserialize
+            return JsonConvert.DeserializeObject<T>(cfg);
         }
 
-        /// <summary>
-        /// Returns a pathname to a user config
-        /// </summary>
-        /// <param name="name"></param>
-        /// <returns></returns>
-        public string GetUserConfigPath(string name)
+        public Task<string> GetUserConfigString(string name, string defaultValue)
         {
-            return config.configs_location + name;
+            return net.SendLoadUserConfigCommand(name, defaultValue);
         }
 
         public const string CONFIGNAME_STRUCTURE_METADATA = "structure_metadata.json";
         public const string CONFIGNAME_FIREBASE = "firebase_config.json";
 
-        /// <summary>
-        /// Connects and sets up databases
-        /// </summary>
-        /// <returns></returns>
-        public async Task Connect()
-        {
-            //Set up database
-            OpenDatabase(config.mongodb_connection, config.env);
-
-            //Set up the core network
-            var serverList = new CoreNetworkServerListDatabase();
-            await serverList.Init(this, config.env);
-            network.Init(this, server_id, serverList);
-
-            //Set me
-            if (serverList.me == null)
-                throw new Exception("Could not find my own server ID in the server list!");
-            else
-                me = serverList.me;
-        }
-
         public void Log(string topic, string message, DeltaLogLevel level)
         {
             //Log to stdout
-            if(config.log)
+            if(loggingEnabled)
             {
                 //Translate level to console color
                 switch (level)
@@ -201,13 +209,8 @@ namespace LibDeltaSystem
             }
 
             //Remote log
-            if(config.log || (int)level >= (int)DeltaLogLevel.High)
-                network.RemoteLog(topic, message, level);
-        }
-
-        public void AttachWebServer(DeltaWebServer server)
-        {
-            this.web_server = server;
+            if(net != null && (loggingEnabled || (int)level >= (int)DeltaLogLevel.High) && !topic.StartsWith("Init") && !topic.StartsWith("RouterIO"))
+                net.SendLogCommand(topic, message, level);
         }
         
         /// <summary>
@@ -224,12 +227,12 @@ namespace LibDeltaSystem
         /// Gets an RPC connection. This can be used to get the RPC object anytime
         /// </summary>
         /// <returns></returns>
-        public List<StructureMetadata> GetStructureMetadata()
+        public async Task<List<StructureMetadata>> GetStructureMetadata()
         {
             //Create a new RPC if needed
             if(_structureMetadatas == null)
             {
-                _structureMetadatas = GetUserConfig<List<StructureMetadata>>(CONFIGNAME_STRUCTURE_METADATA);
+                _structureMetadatas = await GetUserConfig<List<StructureMetadata>>(CONFIGNAME_STRUCTURE_METADATA, new List<StructureMetadata>());
                 _supportedStructureMetadatas = new List<string>();
                 foreach (var s in _structureMetadatas)
                     _supportedStructureMetadatas.AddRange(s.names);
@@ -252,7 +255,7 @@ namespace LibDeltaSystem
             List<DbSteamCache> cacheHits;
             {
                 var filterBuilder = Builders<DbSteamCache>.Filter;
-                var filter = filterBuilder.In("steam_id", ids) & filterBuilder.Lt("time_utc", DateTime.UtcNow.AddMinutes(config.steam_cache_expire_minutes).Ticks);
+                var filter = filterBuilder.In("steam_id", ids) & filterBuilder.Lt("time_utc", DateTime.UtcNow.AddMinutes(steamCacheExpireMinutes).Ticks);
                 cacheHits = await (await system_steam_cache.FindAsync(filter)).ToListAsync();
             }
             foreach(var r in cacheHits)
@@ -266,7 +269,7 @@ namespace LibDeltaSystem
                 return profiles;
 
             //Build the Steam request url
-            string steamRequestUrl = "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=" + config.steam_api_token + "&steamids=";
+            string steamRequestUrl = "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=" + steamApiKey + "&steamids=";
             int steamRequestCount = 0;
             foreach(string s in ids)
             {
@@ -349,7 +352,7 @@ namespace LibDeltaSystem
             DbSteamCache profile = null;
             {
                 //Get the latest date we can use
-                long time = DateTime.UtcNow.AddMinutes(config.steam_cache_expire_minutes).Ticks;
+                long time = DateTime.UtcNow.AddMinutes(steamCacheExpireMinutes).Ticks;
 
                 //Fetch
                 var filterBuilder = Builders<DbSteamCache>.Filter;
@@ -366,7 +369,7 @@ namespace LibDeltaSystem
             SteamProfile_Full profiles;
             try
             {
-                var response = await http.GetAsync("https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=" + config.steam_api_token + "&steamids=" + id);
+                var response = await http.GetAsync("https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=" + steamApiKey + "&steamids=" + id);
                 if (!response.IsSuccessStatusCode)
                     return null;
                 profiles = JsonConvert.DeserializeObject<SteamProfile_Full>(await response.Content.ReadAsStringAsync());
@@ -420,7 +423,7 @@ namespace LibDeltaSystem
             DbSteamModCache profile = null;
             {
                 //Get the latest date we can use
-                long time = DateTime.UtcNow.AddMinutes(config.steam_cache_expire_minutes).Ticks;
+                long time = DateTime.UtcNow.AddMinutes(steamCacheExpireMinutes).Ticks;
 
                 //Fetch
                 var filterBuilder = Builders<DbSteamModCache>.Filter;

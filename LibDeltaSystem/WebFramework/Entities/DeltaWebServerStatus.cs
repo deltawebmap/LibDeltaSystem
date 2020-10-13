@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LibDeltaSystem.CoreNet.NetMessages;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -12,8 +13,8 @@ namespace LibDeltaSystem.WebFramework.Entities
         public bool debug_mode;
         public string server_version;
         public string lib_version;
-        public DeltaConnectionConfig_Hosts hosts;
+        public LoginServerConfigHosts hosts;
         public string server_type;
-        public int server_id;
+        public string server_instance_id;
     }
 }

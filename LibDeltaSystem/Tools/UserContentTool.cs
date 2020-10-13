@@ -14,6 +14,21 @@ namespace LibDeltaSystem.Tools
 {
     public class UserContentTool
     {
+        private static GoogleCredential creds;
+        private static StorageClient client;
+
+        private static async Task<StorageClient> GetClient(DeltaConnection conn)
+        {
+            if(client == null)
+            {
+                //Open client
+                string credsFile = await conn.GetUserConfigString(DeltaConnection.CONFIGNAME_FIREBASE, "");
+                creds = GoogleCredential.FromJson(credsFile);
+                client = StorageClient.Create(creds);
+            }
+            return client;
+        }
+
         /// <summary>
         /// Uploads user content and returns a string for the URL
         /// </summary>
@@ -21,15 +36,14 @@ namespace LibDeltaSystem.Tools
         /// <returns></returns>
         public static async Task<string> UploadUserContent(DeltaConnection conn, Stream data)
         {
-            //Get creds
-            var credential = GoogleCredential.FromFile(conn.GetUserConfigPath(DeltaConnection.CONFIGNAME_FIREBASE));
-            var client = StorageClient.Create(credential);
+            //Get client
+            var client = await GetClient(conn);
 
             //Generate a unique ID
             string id = SecureStringTool.GenerateSecureString(64);
 
             //Upload content
-            var content = await client.UploadObjectAsync(conn.config.firebase_uc_bucket, id + ".png", "image/png", data);
+            var content = await client.UploadObjectAsync(conn.firebaseUcBucket, id + ".png", "image/png", data);
 
             return $"https://firebasestorage.googleapis.com/v0/b/delta-web-map.appspot.com/o/{id}.png?alt=media";
         }

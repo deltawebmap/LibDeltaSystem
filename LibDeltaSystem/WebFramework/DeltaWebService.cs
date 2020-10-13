@@ -156,6 +156,16 @@ namespace LibDeltaSystem.WebFramework
             return DeltaCommonHTTPMethod.Unknown;
         }
 
+        public int GetIntFromQuery(string name, int defaultValue, int min, int max)
+        {
+            int value = GetIntFromQuery(name, defaultValue);
+            if (value > max)
+                value = max;
+            if (value < min)
+                value = min;
+            return value;
+        }
+
         public int GetIntFromQuery(string name, int defaultValue)
         {
             if (!e.Request.Query.ContainsKey(name))
@@ -183,6 +193,17 @@ namespace LibDeltaSystem.WebFramework
                 promise.SetResult(true);
             });
             return promise.Task;
+        }
+
+        public void Redirect(string path, bool forever = false)
+        {
+            //Make sure we haven't started
+            if (stringHeadersWritten)
+                throw new Exception("Cannot redirect. Headers have already been written.");
+
+            //Redirect
+            stringHeadersWritten = true;
+            e.Response.Redirect(path, forever);
         }
     }
 }

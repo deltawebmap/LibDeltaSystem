@@ -22,7 +22,6 @@ namespace LibDeltaSystem.WebFramework
             this.port = port;
             this.services = new List<DeltaWebServiceDefinition>();
             this.start = DateTime.UtcNow;
-            conn.AttachWebServer(this);
         }
 
         public void Log(string topic, string msg)
@@ -64,8 +63,8 @@ namespace LibDeltaSystem.WebFramework
         public async Task OnHTTPRequest(HttpContext e)
         {
             //Do CORS stuff
-            e.Response.Headers.Add("X-Delta-Server-ID", conn.network.me.id.ToString());
-            e.Response.Headers.Add("X-Delta-Server-Type", conn.network.me.type.ToString());
+            e.Response.Headers.Add("X-Delta-Server-Instance-ID", conn.instanceId);
+            e.Response.Headers.Add("X-Delta-Server-Type", conn.server_type.ToString().ToUpper());
             e.Response.Headers.Add("Access-Control-Expose-Headers", GetExposedHeadersString());
             e.Response.Headers.Add("Access-Control-Allow-Headers", GetExposedHeadersString());
             e.Response.Headers.Add("Access-Control-Allow-Origin", "*");
@@ -115,9 +114,12 @@ namespace LibDeltaSystem.WebFramework
 
                 //Run the actual code
                 await session.OnRequest();
+            } catch (DeltaWebException wex)
+            {
+                await WriteStringToBody(e, wex.text, "text/plain", wex.httpCode);
             } catch (Exception ex)
             {
-                await WriteStringToBody(e, $"Internal Server Error. Please try again later.\n\nDEBUG DATA:\nService={service.GetType().Name}\nAppVersion={conn.system_version_major}.{conn.system_version_minor}\nLibVersion={DeltaConnection.LIB_VERSION_MAJOR}.{DeltaConnection.LIB_VERSION_MINOR}\nDeltaServerID={conn.server_id}\nRequestID={session._request_id}", "text/plain", 500);
+                await WriteStringToBody(e, $"Internal Server Error. Please try again later.\n\nDEBUG DATA:\nService={service.GetType().Name}\nAppVersion={conn.system_version_major}.{conn.system_version_minor}\nLibVersion={DeltaConnection.LIB_VERSION_MAJOR}.{DeltaConnection.LIB_VERSION_MINOR}\nDeltaServerInstanceID={conn.instanceId}\nRequestID={session._request_id}", "text/plain", 500);
                 conn.Log("DeltaWebServer-OnHTTPRequest", $"Internal server error. Service={service.GetType().Name}, RequestID={session._request_id}, AppVersion={conn.system_version_major}.{conn.system_version_minor}, LibVersion={DeltaConnection.LIB_VERSION_MAJOR}.{DeltaConnection.LIB_VERSION_MINOR}, URL={e.Request.Path.Value}{e.Request.QueryString}, Exception={ex.Message}, StackTrace={ex.StackTrace}", DeltaLogLevel.High);
             }
         }
@@ -128,7 +130,7 @@ namespace LibDeltaSystem.WebFramework
         /// <returns></returns>
         private string GetExposedHeadersString()
         {
-            string h = "Authorization, X-Delta-Server-ID, X-Delta-Server-Type";
+            string h = "Authorization, X-Delta-Server-Instance-ID, X-Delta-Server-Type";
             foreach (var e in exposedHeaders)
                 h += ", " + e;
             return h;
@@ -153,12 +155,12 @@ namespace LibDeltaSystem.WebFramework
             {
                 start = start,
                 uptime = (long)(DateTime.UtcNow - start).TotalSeconds,
-                enviornment = conn.config.env,
-                hosts = conn.config.hosts,
+                enviornment = conn.enviornment,
+                hosts = conn.hosts,
                 lib_version = $"{DeltaConnection.LIB_VERSION_MAJOR}.{DeltaConnection.LIB_VERSION_MINOR}",
                 server_version = $"{conn.system_version_major}.{conn.system_version_minor}",
-                server_id = conn.server_id,
-                server_type = conn.me.server_type
+                server_instance_id = conn.instanceId,
+                server_type = conn.server_type.ToString()
             };
         }
 

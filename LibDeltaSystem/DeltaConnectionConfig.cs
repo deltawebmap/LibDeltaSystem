@@ -6,7 +6,6 @@ namespace LibDeltaSystem
 {
     public class DeltaConnectionConfig
     {
-        public int version; //Version of the config
         public string env;
         public string mongodb_connection;  //MongoDB connection string
         public int steam_cache_expire_minutes; //Number of minutes before a steam profile expires
