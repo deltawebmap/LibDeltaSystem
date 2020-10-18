@@ -11,15 +11,5 @@ namespace LibDeltaSystem.WebFramework.ServiceTemplates
         public BasicDeltaService(DeltaConnection conn, HttpContext e) : base(conn, e)
         {
         }
-
-        public override async Task<bool> OnPreRequest()
-        {
-            return true;
-        }
-
-        public override async Task<bool> SetArgs(Dictionary<string, string> args)
-        {
-            return true;
-        }
     }
 }

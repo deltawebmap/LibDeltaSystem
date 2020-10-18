@@ -184,11 +184,6 @@ namespace LibDeltaSystem.Db.System
             return CheckFlag(FLAG_INDEX_SETUP);
         }
 
-        /// <summary>
-        /// Gets all canvases
-        /// </summary>
-        /// <param name="id"></param>
-        /// <returns></returns>
         public async Task<List<DbCanvas>> GetServerCanvases(DeltaConnection conn, int? tribe_id)
         {
             var filterBuilder = Builders<DbCanvas>.Filter;
@@ -202,10 +197,6 @@ namespace LibDeltaSystem.Db.System
             return can;
         }
 
-        /// <summary>
-        /// Updates this in the database async
-        /// </summary>
-        /// <returns></returns>
         public async Task ExplicitUpdateAsync(DeltaConnection conn, UpdateDefinition<DbServer> update)
         {
             var filterBuilder = Builders<DbServer>.Filter;
@@ -213,11 +204,6 @@ namespace LibDeltaSystem.Db.System
             await conn.system_servers.FindOneAndUpdateAsync(filter, update);
         }
 
-        /// <summary>
-        /// Returns the player profile for a user, if any
-        /// </summary>
-        /// <param name="steamId"></param>
-        /// <returns></returns>
         public async Task<DbPlayerProfile> GetUserPlayerProfile(DeltaConnection conn, DbUser user)
         {
             var filterBuilder = Builders<DbPlayerProfile>.Filter;
@@ -226,33 +212,6 @@ namespace LibDeltaSystem.Db.System
             return await results.FirstOrDefaultAsync();
         }
 
-        /// <summary>
-        /// Returns the player profile for a user, if any
-        /// </summary>
-        /// <param name="steamId"></param>
-        /// <returns></returns>
-        public async Task<bool> DeleteUserPlayerProfile(DeltaConnection conn, DbUser user)
-        {
-            ///Remove
-            var filterBuilder = Builders<DbPlayerProfile>.Filter;
-            var filter = filterBuilder.Eq("server_id", _id) & filterBuilder.Eq("steam_id", user.steam_id);
-            var results = await conn.content_player_profiles.DeleteOneAsync(filter);
-
-            //Notify of the person leaving if they aren't admin or owner
-            if(!admins.Contains(user._id))
-                await NotifyUserRemoved(conn, user);
-
-            //Reset user groups
-            RPCMessageTool.SystemNotifyUserGroupReset(conn, user);
-
-            return results.DeletedCount == 1;
-        }
-
-        /// <summary>
-        /// Returns 
-        /// </summary>
-        /// <param name="steamId"></param>
-        /// <returns></returns>
         public async Task<List<DbPlayerProfile>> GetPlayerProfiles(DeltaConnection conn, int offset = 0, int limit = int.MaxValue)
         {
             var filterBuilder = Builders<DbPlayerProfile>.Filter;
@@ -265,11 +224,6 @@ namespace LibDeltaSystem.Db.System
             return await results.ToListAsync();
         }
 
-        /// <summary>
-        /// Returns tribe data from it's ID
-        /// </summary>
-        /// <param name="steamId"></param>
-        /// <returns></returns>
         public async Task<DbTribe> GetTribeAsync(DeltaConnection conn, int tribeId)
         {
             return await conn.GetTribeByTribeIdAsync(_id, tribeId);
@@ -284,11 +238,6 @@ namespace LibDeltaSystem.Db.System
             return r;
         }
 
-        /// <summary>
-        /// Uses your Steam ID to try and get your tribe ID
-        /// </summary>
-        /// <param name="steamId"></param>
-        /// <returns></returns>
         public async Task<int?> TryGetTribeIdAsync(DeltaConnection conn, string steamId)
         {
             var filterBuilder = Builders<DbPlayerProfile>.Filter;
@@ -301,11 +250,6 @@ namespace LibDeltaSystem.Db.System
                 return r.tribe_id;
         }
 
-        /// <summary>
-        /// Returns 
-        /// </summary>
-        /// <param name="steamId"></param>
-        /// <returns></returns>
         public async Task<List<DbPlayerProfile>> GetPlayerProfilesByTribeAsync(DeltaConnection conn, int tribeId)
         {
             var filterBuilder = Builders<DbPlayerProfile>.Filter;
@@ -314,11 +258,6 @@ namespace LibDeltaSystem.Db.System
             return await results.ToListAsync();
         }
 
-        /// <summary>
-        /// Returns 
-        /// </summary>
-        /// <param name="steamId"></param>
-        /// <returns></returns>
         public async Task<List<DbUser>> GetUsersByTribeAsync(DeltaConnection conn, int tribeId)
         {
             //Get all player profiles
@@ -336,50 +275,11 @@ namespace LibDeltaSystem.Db.System
             return users;
         }
 
-        /// <summary>
-        /// Returns a placeholder icon
-        /// </summary>
-        /// <param name="display_name"></param>
-        /// <returns></returns>
-        public static string StaticGetPlaceholderIcon(DeltaConnection conn, string display_name)
-        {
-            //Find letters
-            string[] words = display_name.Split(' ');
-            char[] charset = "qwertyuiopasdfghjklzxcvbnm1234567890QWERTYUIOPASDFGHJKLZXCVBNM".ToCharArray();
-            string output = "";
-            for (int i = 0; i < words.Length; i++)
-            {
-                if (output.Length >= 2)
-                    break;
-                if (words[i].Length > 1)
-                {
-                    char c = words[i][0];
-                    if (charset.Contains(c))
-                    {
-                        string sc = new string(new char[] { c });
-                        if (output.Length == 0)
-                            sc = sc.ToUpper();
-                        else
-                            sc = sc.ToLower();
-                        output += sc;
-                    }
-                }
-            }
-
-            //Now, return URL
-            return conn.hosts.assets_icon + "/legacy/placeholder_server_images/" + output + ".png";
-        }
-
-        /// <summary>
-        /// Gets user prefs for a saved user
-        /// </summary>
-        /// <param name="user_id"></param>
-        /// <returns></returns>
         public async Task<SavedUserServerPrefs> GetUserPrefs(DeltaConnection conn, string user_id)
         {
             var filterBuilder = Builders<DbSavedUserServerPrefs>.Filter;
             var filter = filterBuilder.Eq("server_id", id) & filterBuilder.Eq("user_id", user_id);
-            var results = conn.system_saved_user_server_prefs.Find(filter).FirstOrDefault();
+            var results = (await conn.system_saved_user_server_prefs.FindAsync(filter)).FirstOrDefault();
             if (results != null)
             {
                 return results.payload;
@@ -398,13 +298,27 @@ namespace LibDeltaSystem.Db.System
             }
         }
 
+        public async Task<bool> DeleteUserPlayerProfile(DeltaConnection conn, DbUser user)
+        {
+            ///Remove
+            var filterBuilder = Builders<DbPlayerProfile>.Filter;
+            var filter = filterBuilder.Eq("server_id", _id) & filterBuilder.Eq("steam_id", user.steam_id);
+            var results = await conn.content_player_profiles.DeleteOneAsync(filter);
+
+            //Send Events
+            await conn.events.OnUserServerAccessChangedAsync(this, user); //Tell the user
+            conn.events.NotifyUserGroupsUpdated(user._id); //Notify the system that their permissions were changed
+
+            return results.DeletedCount == 1;
+        }
+
         public async Task ChangeSecureMode(DeltaConnection conn, bool secure)
         {
             //Update
             await ExplicitUpdateAsync(conn, Builders<DbServer>.Update.Set("secure_mode", secure).Set("last_secure_mode_toggled", DateTime.UtcNow));
 
-            //Send RPC message
-            RPCMessageTool.SendGuildSetSecureMode(conn, this, secure);
+            //Send Events
+            conn.events.OnServerUpdated(this); //Tell users that we've changed access
         }
 
         public async Task ChangePermissionFlags(DeltaConnection conn, int flags)
@@ -413,8 +327,8 @@ namespace LibDeltaSystem.Db.System
             this.permission_flags = flags;
             await ExplicitUpdateAsync(conn, Builders<DbServer>.Update.Set("permission_flags", flags));
 
-            //Send RPC message
-            RPCMessageTool.SendGuildPermissionChanged(conn, this);
+            //Send Events
+            conn.events.OnServerUpdated(this); //Tell users that we've changed access
         }
 
         public async Task AddAdmin(DeltaConnection conn, DbUser user)
@@ -427,38 +341,27 @@ namespace LibDeltaSystem.Db.System
             //Update
             await ExplicitUpdateAsync(conn, Builders<DbServer>.Update.Set("admins", admins));
 
-            //Send RPC message
-            RPCMessageTool.SendUserServerPermissionsChanged(conn, user._id, this); //Tell this user about the change
-            RPCMessageTool.SendGuildAdminListUpdated(conn, this); //Tell users on the server
-            RPCMessageTool.SystemNotifyUserGroupReset(conn, user); //Reset user groups
+            //Send Events
+            conn.events.NotifyUserGroupsUpdated(user._id); //Update permissions in the backend
+            conn.events.OnServerUpdated(this); //Inform all users that we've changed admin access
+            conn.events.OnUserServerJoined(this, user); //This just tells users that haven't already had the server listed that they can now access it
+            await conn.events.OnUserServerAccessChangedAsync(this, user); //Tell the user that access has changed
         }
 
-        public async Task<bool> RemoveAdmin(DeltaConnection conn, DbUser user)
+        public async Task RemoveAdmin(DeltaConnection conn, DbUser user)
         {
             //Change admins
             if (!admins.Contains(user._id))
-                return false;
+                return;
             admins.Remove(user._id);
             
             //Update
             await ExplicitUpdateAsync(conn, Builders<DbServer>.Update.Set("admins", admins));
 
-            //Send RPC message
-            RPCMessageTool.SendUserServerPermissionsChanged(conn, user._id, this); //Tell this user about the change
-            RPCMessageTool.SendGuildAdminListUpdated(conn, this); //Tell users on the server
-            RPCMessageTool.SystemNotifyUserGroupReset(conn, user); //Reset user groups
-
-            //If this user doesn't have a profile and isn't owner, that means that they've lost access. Tell them that
-            if (await GetUserPlayerProfile(conn, user) == null)
-                await NotifyUserRemoved(conn, user);
-
-            return true;
-        }
-
-        public async Task NotifyUserRemoved(DeltaConnection conn, DbUser user)
-        {
-            RPCMessageTool.SendUserServerRemoved(conn, user._id, this);
-            RPCMessageTool.SendGuildUserRemoved(conn, this, user);
+            //Send Events
+            conn.events.OnServerUpdated(this); //Inform all users that we've changed admin access
+            await conn.events.OnUserServerAccessChangedAsync(this, user); //Tell the user that access has changed
+            conn.events.NotifyUserGroupsUpdated(user._id); //Update permissions in the backend
         }
 
         public async Task DeleteServer(DeltaConnection conn)
@@ -474,13 +377,40 @@ namespace LibDeltaSystem.Db.System
             await DbDino.DeleteServerContent(conn, this._id);
             await DbPlayerProfile.DeleteServerContent(conn, this._id);
 
-            //Send RPC event to all
-            RPCMessageTool.SendGuildServerRemoved(conn, this);
+            //Send Events
+            conn.events.OnServerDeleted(this);
+            //It's unimportant to notify user groups changed, as no further events will ever be sent from this server
         }
 
-        public async Task NotifyPublicDetailsChanged(DeltaConnection conn)
+        public async Task UpdateServerIconAsync(DeltaConnection conn, string url)
         {
-            await RPCMessageTool.SendGuildPublicDetailsChanged(conn, this);
+            //Update
+            await ExplicitUpdateAsync(conn, Builders<DbServer>.Update.Set("image_url", url).Set("has_custom_image", true));
+            image_url = url;
+            has_custom_image = true;
+
+            //Notify via RPC
+            conn.events.OnServerUpdated(this);
+        }
+
+        public async Task UpdateServerNameAsync(DeltaConnection conn, string name)
+        {
+            //Update
+            await ExplicitUpdateAsync(conn, Builders<DbServer>.Update.Set("display_name", name));
+            display_name = name;
+
+            //Send Event
+            conn.events.OnServerUpdated(this);
+        }
+
+        public async Task UpdateServerPermissionsTemplate(DeltaConnection conn, string name)
+        {
+            //Update
+            await ExplicitUpdateAsync(conn, Builders<DbServer>.Update.Set("permissions_template", name));
+            permissions_template = name;
+
+            //Send Event
+            conn.events.OnServerUpdated(this);
         }
     }
 }

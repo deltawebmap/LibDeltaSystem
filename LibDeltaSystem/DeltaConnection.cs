@@ -28,18 +28,19 @@ namespace LibDeltaSystem
     public class DeltaConnection : DeltaDatabaseConnection, IDeltaLogger
     {
         public const byte LIB_VERSION_MAJOR = 1;
-        public const byte LIB_VERSION_MINOR = 1;
+        public const byte LIB_VERSION_MINOR = 3;
 
         public RouterConnection net;
         public string instanceId;
         public HttpClient http;
+        public DeltaEventMaster events;
 
         public DeltaCoreNetServerType server_type;
         public byte system_version_minor;
         public byte system_version_major;
 
         public LoginServerConfigHosts hosts;
-        public bool loggingEnabled;
+        public bool loggingEnabled = true;
         public string steamApiKey;
         public int steamCacheExpireMinutes;
         public byte[] steamTokenKey;
@@ -92,6 +93,9 @@ namespace LibDeltaSystem
             //Connect to database
             OpenDatabase(loginDetails.config.mongodb_connection, loginDetails.config.enviornment);
 
+            //Open event handler
+            events = new DeltaEventMaster(this);
+
             //Log
             Log("Init", $"Init succeeded. Connected with instance ID {loginDetails.instance_id}.", DeltaLogLevel.Medium);
         }
@@ -100,7 +104,7 @@ namespace LibDeltaSystem
         /// Initializes the session offline, or not connected to any router server
         /// </summary>
         /// <returns></returns>
-        public async Task InitOffline(LoginServerConfig config, int[] ports)
+        public void InitOffline(LoginServerConfig config, int[] ports)
         {
             //Set config
             enviornment = config.enviornment;

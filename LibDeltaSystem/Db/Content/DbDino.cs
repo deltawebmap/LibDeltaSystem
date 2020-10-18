@@ -194,36 +194,9 @@ namespace LibDeltaSystem.Db.Content
             return dino;
         }
 
-        /// <summary>
-        /// Updates the current dino. Does NOT apply the updates to this instance. Updates last_update_time automatically
-        /// </summary>
-        /// <param name="token"></param>
-        /// <param name="server"></param>
-        /// <returns></returns>
-        public async Task UpdateDino(DeltaConnection conn, DbServer server, UpdateDefinition<DbDino> baseUpdates)
-        {
-            //Apply update
-            var filterBuilder = Builders<DbDino>.Filter;
-            var filter = filterBuilder.Eq("dino_id", dino_id) & filterBuilder.Eq("server_id", server._id);
-            var updateBuilder = Builders<DbDino>.Update;
-            var updates = updateBuilder.Combine(updateBuilder.Set("last_update_time", DateTime.UtcNow), baseUpdates);
-            var response = await conn.content_dinos.FindOneAndUpdateAsync(filter, updates, new FindOneAndUpdateOptions<DbDino, DbDino>
-            {
-                ReturnDocument = ReturnDocument.After
-            });
-
-            //Send RPC update
-            Tools.RPCMessageTool.SendDbContentUpdateMessage(conn, RPC.Payloads.Entities.RPCSyncType.Dino, new List<object>
-            {
-                NetDino.ConvertDbDino(response)
-            }, server._id, tribe_id);
-        }
-
         public async Task UpdatePrefs(DeltaConnection conn, DbServer server, SavedDinoTribePrefs prefs)
         {
-            //Create update and apply
-            var update = Builders<DbDino>.Update.Set("prefs", prefs);
-            await UpdateDino(conn, server, update);
+            //TODO
 
             //Set here
             this.prefs = prefs;

@@ -13,7 +13,6 @@ namespace LibDeltaSystem.Tools.DeltaWebFormat
     {
         public Stream output;
         private List<string> nameTable;
-        private uint sign;
         private Type dataType;
 
         public DeltaWebFormatEncoder(Stream output, Type dataType)

@@ -21,7 +21,7 @@ namespace LibDeltaSystem.Entities.CommonNet
         public bool secure_mode;
         public DateTime last_secure_mode_toggled;
 
-        public async Task SetServerData(DeltaConnection conn, DbServer server)
+        public void SetServerData(DbServer server)
         {
             //Set
             display_name = server.display_name;
@@ -37,10 +37,10 @@ namespace LibDeltaSystem.Entities.CommonNet
             mods = server.mods;
         }
 
-        public static async Task<NetGuildUser> GetGuild(DeltaConnection conn, DbServer server)
+        public static NetGuildUser GetGuild(DbServer server)
         {
             NetGuildUser g = new NetGuildUser();
-            await g.SetServerData(conn, server);
+            g.SetServerData(server);
             return g;
         }
     }

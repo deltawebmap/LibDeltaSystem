@@ -56,7 +56,7 @@ namespace LibDeltaSystem.Entities.CommonNet
         public static async Task<NetGuildUser> GetNetGuild(DeltaConnection conn, DbServer server, DbUser user, DbPlayerProfile profile)
         {
             NetGuildUser g = new NetGuildUser();
-            await g.SetServerData(conn, server);
+            g.SetServerData(server);
             await g.SetServerGuildData(conn, server, user, profile);
             return g;
         }
@@ -65,7 +65,7 @@ namespace LibDeltaSystem.Entities.CommonNet
         {
             NetGuildUser g = new NetGuildUser();
             var profile = await server.GetUserPlayerProfile(conn, user);
-            await g.SetServerData(conn, server);
+            g.SetServerData(server);
             await g.SetServerGuildData(conn, server, user, profile);
             return g;
         }

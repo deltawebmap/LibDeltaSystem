@@ -86,7 +86,6 @@ namespace LibDeltaSystem.CoreNet
 
         public void SendLogCommand(string topic, string message, DeltaLogLevel level)
         {
-            return;
             //Calculate lengths
             int topicLen = Encoding.UTF8.GetByteCount(topic);
             int messageLen = Encoding.UTF8.GetByteCount(message);

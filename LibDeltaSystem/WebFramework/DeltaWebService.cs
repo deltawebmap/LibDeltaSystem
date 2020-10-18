@@ -36,7 +36,9 @@ namespace LibDeltaSystem.WebFramework
         /// Called before args are created. Do authorization here. Return false to fail
         /// </summary>
         /// <returns></returns>
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
         public virtual async Task<bool> OnPreRequest()
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             return true;
         }
@@ -45,7 +47,9 @@ namespace LibDeltaSystem.WebFramework
         /// Sets args that were passed via URL. Keys are defined in the definition
         /// </summary>
         /// <param name="args"></param>
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
         public virtual async Task<bool> SetArgs(Dictionary<string, string> args)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             return true;
         }

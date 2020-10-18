@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Channels;
+using System.Threading.Tasks;
 
 namespace LibDeltaSystem.CoreNet.IO
 {
@@ -189,6 +190,13 @@ namespace LibDeltaSystem.CoreNet.IO
         public void Log(string topic, string msg, DeltaLogLevel level)
         {
             baseLogger.Log("BaseRouterIO-" + topic, msg, level);
+        }
+
+        public async Task<T> RequestGetObject<T>(short opcode)
+        {
+            var c = SendMessageGetResponseChannel(opcode, new byte[0]);
+            var m = await c.ReadAsync();
+            return m.DeserializeAs<T>();
         }
     }
 }

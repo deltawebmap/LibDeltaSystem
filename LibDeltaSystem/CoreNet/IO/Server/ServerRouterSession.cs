@@ -56,7 +56,7 @@ namespace LibDeltaSystem.CoreNet.IO.Server
                     incomingBuffer[i] = incomingBuffer[i + consumed];
                 sock.BeginReceive(incomingBuffer, notConsumed, incomingBuffer.Length - notConsumed, SocketFlags.None, OnReceiveData, null);
             }
-            catch (SocketException sex)
+            catch (SocketException)
             {
                 //Likely just disconnected. Drop quietly
                 server.DropClient(this);
@@ -64,7 +64,7 @@ namespace LibDeltaSystem.CoreNet.IO.Server
             catch (Exception ex)
             {
                 //Unknown error. Drop with log
-                Log("OnReceiveData", "Hit exception handling incoming data. Dropping client...", DeltaLogLevel.Medium);
+                Log("OnReceiveData", $"Hit exception handling incoming data: {ex.Message}{ex.StackTrace}. Dropping client...", DeltaLogLevel.Medium);
                 server.DropClient(this);
             }
         }

@@ -129,7 +129,7 @@ namespace LibDeltaSystem.CoreNet.IO.Server
                 }
                 catch (Exception ex)
                 {
-                    Log("OutgoingQueueWorkerThread", "Communication error with client. Dropping client and further messages to client...", DeltaLogLevel.Medium);
+                    Log("OutgoingQueueWorkerThread", $"Communication error with client: {ex.Message}{ex.StackTrace} Dropping client and further messages to client...", DeltaLogLevel.Medium);
                     DropClient(p.Item1);
                 }
             }

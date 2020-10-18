@@ -59,7 +59,9 @@ namespace LibDeltaSystem.WebFramework.WebSockets.Groups
                 holder.AddClient(this, q);
         }
 
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
         public override async Task OnSockClosed(WebSocket sock)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             //Remove ourselves from all groups
             holder.RemoveClient(this);
@@ -85,7 +87,9 @@ namespace LibDeltaSystem.WebFramework.WebSockets.Groups
             conn.Log("RPCConnection-HandleCommandAuth", $"[SESSION {_request_id}] Refreshed groups. {queries.Count} queries, {groups.Count} groups added.", DeltaLogLevel.Debug);
         }
 
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
         public virtual async Task OnGroupsUpdated()
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             //Let users do what they want with this
         }
