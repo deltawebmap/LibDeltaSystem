@@ -16,6 +16,7 @@ namespace LibDeltaSystem.CoreNet.IO
         public byte app_version_minor;
         public int message_id;
         public byte[] payload;
+        public bool flagIsLast;
 
         private BaseRouterIO io;
         private int responseToken;
@@ -35,6 +36,7 @@ namespace LibDeltaSystem.CoreNet.IO
             this.message_id = p.message_id;
             this.opcode = p.opcode;
             this.payload = new byte[p.total_message_length];
+            this.flagIsLast = 1 == ((p.flags >> 1) & 1U);
         }
 
         /// <summary>
