@@ -10,5 +10,6 @@ namespace LibDeltaSystem.CoreNet.NetMessages.Master.Entities
         public string version_id;
         public long id;
         public int[] ports;
+        public string site_id; //May be null
     }
 }

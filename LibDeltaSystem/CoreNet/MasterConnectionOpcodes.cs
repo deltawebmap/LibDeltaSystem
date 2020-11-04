@@ -19,5 +19,7 @@ namespace LibDeltaSystem.CoreNet
         public const short OPCODE_MASTER_M_UPDATEINSTANCE = 10010;
         public const short OPCODE_MASTER_M_DESTROYINSTANCE = 10011;
         public const short OPCODE_MASTER_M_DELETEVERSION = 10012;
+        public const short OPCODE_MASTER_M_ADDSITE = 10013;
+        public const short OPCODE_MASTER_M_LISTSITES = 10014;
     }
 }
