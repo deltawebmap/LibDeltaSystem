@@ -28,9 +28,10 @@ namespace LibDeltaSystem
     public class DeltaConnection : DeltaDatabaseConnection, IDeltaLogger
     {
         public const byte LIB_VERSION_MAJOR = 1;
-        public const byte LIB_VERSION_MINOR = 6;
+        public const byte LIB_VERSION_MINOR = 7;
 
         public RouterConnection net;
+        public long serverId;
         public string instanceId;
         public HttpClient http;
         public DeltaEventMaster events;
@@ -145,6 +146,7 @@ namespace LibDeltaSystem
 
             //Create
             var d = new DeltaConnection(int.Parse(startupArgs[0]), long.Parse(startupArgs[1]), system_version_major, system_version_minor, server_type);
+            d.serverId = long.Parse(startupArgs[1]);
 
             //Connect
             d.InitNetworked().GetAwaiter().GetResult();

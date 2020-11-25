@@ -121,6 +121,11 @@ namespace LibDeltaSystem.Db.System
         public int last_client_version { get; set; }
 
         /// <summary>
+        /// The hostname of the server responsible for hosting ARK content
+        /// </summary>
+        public string game_content_server_hostname { get; set; } = "us-01.content-prod.deltamap.net";
+
+        /// <summary>
         /// Returns the player profile by ID
         /// </summary>
         /// <param name="steamId"></param>

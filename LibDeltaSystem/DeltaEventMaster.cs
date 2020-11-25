@@ -1,5 +1,7 @@
 ﻿using LibDeltaSystem.CoreNet;
 using LibDeltaSystem.Db.System;
+using LibDeltaSystem.Entities.CommonNet;
+using LibDeltaSystem.RPC.Payloads;
 using LibDeltaSystem.Tools;
 using MongoDB.Bson;
 using System;
@@ -36,7 +38,8 @@ namespace LibDeltaSystem
         /// <param name="custom_data"></param>
         public void OnUserArkRpcCallback(ObjectId user, ObjectId guild_id, ObjectId rpc_id, Dictionary<string, string> custom_data)
         {
-
+            RPCPayloadArkRpcCallback payload = new RPCPayloadArkRpcCallback(rpc_id, custom_data);
+            RPCMessageTool.SendRPCMsgToUserID(conn, RPC.RPCOpcode.ARK_RPC_CALLBACK, payload, user, guild_id);
         }
 
         /// <summary>
@@ -46,6 +49,13 @@ namespace LibDeltaSystem
         {
             //Fetch the player profile
             var playerProfile = await server.GetUserPlayerProfile(conn, user);
+
+            //Check if they are admin
+            bool isAdmin = server.CheckIsUserAdmin(user);
+
+            //Get payload and send
+            RPCPayloadServerAccessChanged payload = new RPCPayloadServerAccessChanged(isAdmin, playerProfile);
+            RPCMessageTool.SendRPCMsgToUserID(conn, RPC.RPCOpcode.SERVER_ACCESS_CHANGED, payload, user._id, server._id);
         }
 
         /// <summary>
@@ -53,9 +63,14 @@ namespace LibDeltaSystem
         /// </summary>
         /// <param name="server"></param>
         /// <param name="user"></param>
-        public void OnUserServerJoined(DbServer server, DbUser user)
+        public async Task OnUserServerJoined(DbServer server, DbUser user)
         {
+            //Get the net version of the guild
+            var net = await NetGuildUser.GetNetGuild(conn, server, user);
 
+            //Get payload and send
+            RPCPayloadServerJoined payload = new RPCPayloadServerJoined(net);
+            RPCMessageTool.SendRPCMsgToUserID(conn, RPC.RPCOpcode.SERVER_JOINED, payload, user._id);
         }
 
         /// <summary>
@@ -64,7 +79,8 @@ namespace LibDeltaSystem
         /// <param name="server"></param>
         public void OnServerUpdated(DbServer server)
         {
-
+            RPCPayloadServerUpdated payload = new RPCPayloadServerUpdated(NetGuild.GetGuild(server));
+            RPCMessageTool.SendRPCMsgToServer(conn, RPC.RPCOpcode.SERVER_UPDATED, payload, server._id);
         }
 
         /// <summary>
@@ -73,7 +89,8 @@ namespace LibDeltaSystem
         /// <param name="server"></param>
         public void OnServerDeleted(DbServer server)
         {
-
+            RPCPayloadServerDeleted payload = new RPCPayloadServerDeleted(server._id);
+            RPCMessageTool.SendRPCMsgToServer(conn, RPC.RPCOpcode.SERVER_DELETED, payload, server._id);
         }
     }
 }

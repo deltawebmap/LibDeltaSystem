@@ -16,6 +16,7 @@ namespace LibDeltaSystem.CoreNet
         private ClientRouterIO io;
         private DeltaConnection conn;
         private long routerKey;
+        private Dictionary<short, List<ClientRouterIOReceiveMessageEventArgs>> boundReceiveEvents;
         public bool loggedIn;
 
         //Opcodes from servers to manager
@@ -23,19 +24,42 @@ namespace LibDeltaSystem.CoreNet
         public const short OPCODE_SYS_GETCFG = 2;
         public const short OPCODE_SYS_USERCFG = 3;
         public const short OPCODE_SYS_LOG = 4;
-
-        public const short OPCODE_DIST_RPC = 101;
+        public const short OPCODE_SYS_RPC = 5;
 
         public RouterConnection(IPEndPoint endpoint, long routerKey, DeltaConnection conn)
         {
             //Set
             this.conn = conn;
             this.routerKey = routerKey;
+            this.boundReceiveEvents = new Dictionary<short, List<ClientRouterIOReceiveMessageEventArgs>>();
             
             //Make IO
             io = new ClientRouterIO(conn, new UnencryptedTransport(), new MinorMajorVersionPair(conn.system_version_major, conn.system_version_minor), endpoint);
             io.OnConnected += Io_OnConnected;
             io.OnDisconnected += Io_OnDisconnected;
+            io.OnRouterReceiveMessage += Io_OnRouterReceiveMessage;
+        }
+
+        private void Io_OnRouterReceiveMessage(RouterMessage msg)
+        {
+            //Dispatch
+            bool handled = false;
+            if(boundReceiveEvents.ContainsKey(msg.opcode))
+            {
+                for (int i = 0; i < boundReceiveEvents[msg.opcode].Count; i++)
+                {
+                    try
+                    {
+                        boundReceiveEvents[msg.opcode][i](msg);
+                    } catch (Exception ex)
+                    {
+                        conn.Log("Io_OnRouterReceiveMessage", $"Error handling incoming message from bound event: {ex.Message}{ex.StackTrace}", DeltaLogLevel.High);
+                    }
+                }
+                handled = boundReceiveEvents[msg.opcode].Count > 0;
+            }
+            if (!handled)
+                conn.Log("Io_OnRouterReceiveMessage", $"Got unknown opcode {msg.opcode}, and nothing was able to handle it!", DeltaLogLevel.Low);
         }
 
         private void Io_OnConnected()
@@ -53,6 +77,16 @@ namespace LibDeltaSystem.CoreNet
         private void Io_OnDisconnected()
         {
             loggedIn = false;
+        }
+
+        public void BindReceiveEvent(short opcode, ClientRouterIOReceiveMessageEventArgs callback)
+        {
+            lock(boundReceiveEvents)
+            {
+                if (!boundReceiveEvents.ContainsKey(opcode))
+                    boundReceiveEvents.Add(opcode, new List<ClientRouterIOReceiveMessageEventArgs>());
+                boundReceiveEvents[opcode].Add(callback);
+            }
         }
 
         public async Task<LoginServerInfo> RequestConfig()
@@ -102,20 +136,9 @@ namespace LibDeltaSystem.CoreNet
             io.SendMessage(OPCODE_SYS_LOG, buffer);
         }
 
-        public void SendRPCCommand(RPC.RPCOpcode opcode, byte filterType, byte[] filterData, byte actionType, byte[] actionData)
+        public void SendRPCCommand(byte[] payload)
         {
-            //Create buffer
-            byte[] buffer = new byte[4 + 1 + 1 + filterData.Length + 1 + 4 + actionData.Length];
-            BitConverter.GetBytes((int)opcode).CopyTo(buffer, 0);
-            buffer[4] = filterType;
-            buffer[5] = (byte)filterData.Length;
-            Array.Copy(filterData, 0, buffer, 6, filterData.Length);
-            buffer[6 + filterData.Length] = actionType;
-            BitConverter.GetBytes(actionData.Length).CopyTo(buffer, 6 + filterData.Length + 1);
-            Array.Copy(actionData, 0, buffer, 6 + filterData.Length + 5, actionData.Length);
-
-            //Send
-            io.SendMessage(OPCODE_DIST_RPC, buffer);
+            io.SendMessage(OPCODE_SYS_RPC, payload);
         }
     }
 }

@@ -17,6 +17,7 @@ namespace LibDeltaSystem.Entities.CommonNet
         public int flags;
         public string permissions_template;
         public string[] mods;
+        public string content_server_hostname;
 
         public bool secure_mode;
         public DateTime last_secure_mode_toggled;
@@ -35,6 +36,7 @@ namespace LibDeltaSystem.Entities.CommonNet
             flags = server.flags;
             permissions_template = server.permissions_template;
             mods = server.mods;
+            content_server_hostname = server.game_content_server_hostname;
         }
 
         public static NetGuildUser GetGuild(DbServer server)
