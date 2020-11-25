@@ -12,6 +12,7 @@ namespace LibDeltaSystem
         API_ECHO = 12,
         API_SYNC = 13,
         API_RPC = 14,
+        API_PRIMAL_PACKAGE_MANAGER = 15,
         API_SERVER_CONTENT_BUCKET = 19,
     }
 }

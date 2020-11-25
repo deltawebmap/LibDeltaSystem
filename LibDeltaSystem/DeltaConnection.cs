@@ -28,7 +28,7 @@ namespace LibDeltaSystem
     public class DeltaConnection : DeltaDatabaseConnection, IDeltaLogger
     {
         public const byte LIB_VERSION_MAJOR = 1;
-        public const byte LIB_VERSION_MINOR = 7;
+        public const byte LIB_VERSION_MINOR = 8;
 
         public RouterConnection net;
         public long serverId;
