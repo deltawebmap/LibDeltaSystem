@@ -11,6 +11,7 @@ namespace LibDeltaSystem.CoreNet.IO.Server
         internal Socket sock;
         private IServerRouterIO server;
         private byte[] incomingBuffer;
+        private int incomingOffset;
 
         public EndPoint RemoteEndPoint { get { return sock.RemoteEndPoint; } }
 
@@ -18,7 +19,7 @@ namespace LibDeltaSystem.CoreNet.IO.Server
         {
             this.server = server;
             this.sock = sock;
-            incomingBuffer = new byte[MESSAGE_TOTAL_SIZE];
+            incomingBuffer = new byte[transport.GetFrameSize()];
         }
 
         public virtual string GetDebugName()
@@ -28,7 +29,7 @@ namespace LibDeltaSystem.CoreNet.IO.Server
 
         public void ListenIncoming()
         {
-            sock.BeginReceive(incomingBuffer, 0, incomingBuffer.Length, SocketFlags.None, OnReceiveData, null);
+            sock.BeginReceive(incomingBuffer, incomingOffset, incomingBuffer.Length - incomingOffset, SocketFlags.None, OnReceiveData, null);
         }
 
         private void OnReceiveData(IAsyncResult ar)
@@ -37,29 +38,29 @@ namespace LibDeltaSystem.CoreNet.IO.Server
             {
                 //Finish read
                 int read = sock.EndReceive(ar);
+                incomingOffset += read;
                 if (read == 0)
                     throw new Exception("Disconnected from client.");
 
-                //Decode message
-                int consumed = transport.DecodePacket(incomingBuffer, out RouterPacket packet);
-                int notConsumed = read - consumed;
+                //Check if we have a full packet
+                if (read == incomingBuffer.Length)
+                {
+                    //Decode
+                    transport.DecodePacket(incomingBuffer, out RouterPacket packet);
 
-                //Handle
-                _OnReceivePacket(packet);
+                    //Reset state
+                    incomingOffset = 0;
 
-                //Zero out the first four bytes of the buffer. This prevents us from rereading corrupted messages
-                for (int i = 0; i < 4; i++)
-                    incomingBuffer[i] = 0x00;
+                    //Handle
+                    _OnReceivePacket(packet);
 
-                //Listen for next
-                for (var i = 0; i < notConsumed; i++)
-                    incomingBuffer[i] = incomingBuffer[i + consumed];
-                sock.BeginReceive(incomingBuffer, notConsumed, incomingBuffer.Length - notConsumed, SocketFlags.None, OnReceiveData, null);
-            }
-            catch (SocketException)
-            {
-                //Likely just disconnected. Drop quietly
-                server.DropClient(this);
+                    //Zero out the first four bytes of the buffer. This prevents us from rereading corrupted messages
+                    for (int i = 0; i < 4; i++)
+                        incomingBuffer[i] = 0x00;
+                }
+
+                //Listen
+                ListenIncoming();
             }
             catch (Exception ex)
             {

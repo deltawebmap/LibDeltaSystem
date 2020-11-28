@@ -125,7 +125,7 @@ namespace LibDeltaSystem.CoreNet.IO.Server
                 //Send
                 try
                 {
-                    p.Item1.sock.Send(buffer, len, SocketFlags.None);
+                    p.Item1.sock.Send(buffer, buffer.Length, SocketFlags.None);
                 }
                 catch (Exception ex)
                 {

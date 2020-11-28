@@ -13,7 +13,7 @@ namespace LibDeltaSystem.CoreNet.IO
 {
     public abstract class BaseRouterIO : IDeltaLogger
     {
-        public const int MESSAGE_PAYLOAD_SIZE = 1024;
+        public const int MESSAGE_PAYLOAD_SIZE = 512;
         public const int MESSAGE_TOTAL_SIZE = MESSAGE_PAYLOAD_SIZE + 32;
 
         private IDeltaLogger baseLogger;

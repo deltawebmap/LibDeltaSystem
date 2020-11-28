@@ -20,7 +20,7 @@ namespace LibDeltaSystem.CoreNet.IO.Transports
             return len;
         }
 
-        public int GetBufferSize()
+        public int GetFrameSize()
         {
             return BaseRouterIO.MESSAGE_TOTAL_SIZE;
         }

@@ -45,8 +45,8 @@ namespace LibDeltaSystem.CoreNet.IO.Client
         private void RunNetWorkerThread()
         {
             RouterPacket p;
-            byte[] incomingBuffer = new byte[transport.GetBufferSize()];
-            byte[] outgoingBuffer = new byte[transport.GetBufferSize()];
+            byte[] incomingBuffer = new byte[transport.GetFrameSize()];
+            byte[] outgoingBuffer = new byte[transport.GetFrameSize()];
             int incomingOffset = 0;
             Socket sock = null;
             while (true)
@@ -78,7 +78,7 @@ namespace LibDeltaSystem.CoreNet.IO.Client
                         int len = transport.EncodePacket(outgoingBuffer, p);
 
                         //Send
-                        sock.Send(outgoingBuffer, len, SocketFlags.None);
+                        sock.Send(outgoingBuffer, outgoingBuffer.Length, SocketFlags.None);
                     }
 
                     //Try to get the next packet
@@ -86,18 +86,20 @@ namespace LibDeltaSystem.CoreNet.IO.Client
                     {
                         //Read
                         int read = sock.Receive(incomingBuffer, incomingOffset, incomingBuffer.Length - incomingOffset, SocketFlags.None);
+                        incomingOffset += read;
 
-                        //Decode
-                        int consumed = transport.DecodePacket(incomingBuffer, out p);
-                        int notConsumed = read - consumed;
+                        //Check if we have a full packet
+                        if (incomingOffset == incomingBuffer.Length)
+                        {
+                            //Decode
+                            transport.DecodePacket(incomingBuffer, out p);
 
-                        //Shift
-                        for (var i = 0; i < notConsumed; i++)
-                            incomingBuffer[i] = incomingBuffer[i + consumed];
-                        incomingOffset = notConsumed;
+                            //Reset state
+                            incomingOffset = 0;
 
-                        //Handle
-                        _OnReceivePacket(p);
+                            //Handle
+                            _OnReceivePacket(p);
+                        }
                     }
                 }
                 catch (Exception ex)

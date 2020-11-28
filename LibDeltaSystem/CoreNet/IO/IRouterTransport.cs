@@ -10,7 +10,7 @@ namespace LibDeltaSystem.CoreNet.IO
         /// Returns the max buffer size to allocate
         /// </summary>
         /// <returns></returns>
-        int GetBufferSize();
+        int GetFrameSize();
 
         /// <summary>
         /// Decodes a packet and returns the number of bytes consumed
