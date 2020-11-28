@@ -103,7 +103,7 @@ namespace LibDeltaSystem.CoreNet.IO.Client
                 catch (Exception ex)
                 {
                     //Disconnect and try again
-                    Log("NetWorker", $"Disconnected from router! '{ex.Message}' Attempting reconnection shortly...", DeltaLogLevel.Medium);
+                    Log("NetWorker", $"Disconnected from server! Attempting reconnection shortly... {ex.Message}{ex.StackTrace}", DeltaLogLevel.Medium);
                     try
                     {
                         sock.Close();
