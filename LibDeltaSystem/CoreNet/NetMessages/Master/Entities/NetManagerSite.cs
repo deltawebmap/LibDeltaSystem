@@ -12,6 +12,7 @@ namespace LibDeltaSystem.CoreNet.NetMessages.Master.Entities
         public string cert_name;
         public string document_root;
         public string proxy_root;
-        public string proto;
+        public string proto; //now assumed to be HTTP
+        public string[] websock_endpoints = new string[0];
     }
 }
