@@ -1,9 +1,11 @@
-﻿using LibDeltaSystem.Entities;
+﻿using LibDeltaSystem.CoreNet.IO.Entities;
+using LibDeltaSystem.Entities;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
@@ -31,6 +33,37 @@ namespace LibDeltaSystem.CoreNet.IO
             waitingResponseSessions = new ConcurrentDictionary<int, Channel<RouterMessage>>();
         }
 
+        public Task<IoPingResponse> SendPing()
+        {
+            return SendPing(CancellationToken.None);
+        }
+
+        public async Task<IoPingResponse?> SendPing(int timeoutMs)
+        {
+            var task = SendPing();
+            if (await Task.WhenAny(task, Task.Delay(timeoutMs)) == task)
+            {
+                return task.Result;
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+        public async Task<IoPingResponse> SendPing(CancellationToken token)
+        {
+            var channel = SendSystemMessageGetResponseChannel(-1, new byte[0]);
+            var r = await channel.ReadAsync(token).AsTask();
+            return new IoPingResponse
+            {
+                lib_version_major = r.payload[0],
+                lib_version_minor = r.payload[1],
+                app_version_major = r.payload[2],
+                app_version_minor = r.payload[3]
+            };
+        }
+
         public void SendMessage(short opcode, byte[] payload)
         {
             _SendMessage(opcode, payload, 0, 0);
@@ -50,7 +83,17 @@ namespace LibDeltaSystem.CoreNet.IO
             return SendMessageGetResponseChannel(opcode, Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(payload)));
         }
 
+        private ChannelReader<RouterMessage> SendSystemMessageGetResponseChannel(short opcode, byte[] payload)
+        {
+            return SendMessageGetResponseChannel(opcode, payload, 0b00000010);
+        }
+
         public ChannelReader<RouterMessage> SendMessageGetResponseChannel(short opcode, byte[] payload)
+        {
+            return SendMessageGetResponseChannel(opcode, payload, 0);
+        }
+
+        private ChannelReader<RouterMessage> SendMessageGetResponseChannel(short opcode, byte[] payload, short flags)
         {
             //Get a response token
             int token = GetUniqueMessageId();
@@ -62,7 +105,7 @@ namespace LibDeltaSystem.CoreNet.IO
             waitingResponseSessions.TryAdd(token, channel);
 
             //Send the message
-            _SendMessage(opcode, payload, 0, token);
+            _SendMessage(opcode, payload, flags, token);
 
             //Return channel
             return channel.Reader;
@@ -129,9 +172,23 @@ namespace LibDeltaSystem.CoreNet.IO
                     Log("HandleIncomingMessage", $"Got packet response token {lastPacket.response_token}, but there were no waiting sessions for it! Dropping packet...(although something bad has probably happened)", DeltaLogLevel.High);
                 }
             }
-            else
+            else if(lastPacket.CheckFlag(1))
             {
-                //This is an incoming message
+                //This is an incoming system message
+                if(lastPacket.opcode == -1)
+                {
+                    //Ping message
+                    msg.Respond(new byte[]
+                    {
+                        DeltaConnection.LIB_VERSION_MAJOR,
+                        DeltaConnection.LIB_VERSION_MINOR,
+                        appVersion.major,
+                        appVersion.major
+                    }, true);
+                }
+            } else
+            {
+                //This is an incoming message, handle as usual
                 RouterReceiveMessage(msg);
             }
         }

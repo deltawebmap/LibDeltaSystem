@@ -23,5 +23,7 @@ namespace LibDeltaSystem.CoreNet
         public const short OPCODE_MASTER_M_LISTSITES = 10014;
         public const short OPCODE_MASTER_M_ASSIGNSITE = 10015;
         public const short OPCODE_MASTER_GETUSERCFG = 10016;
+        public const short OPCODE_MASTER_REBOOT_INSTANCE = 10017;
+        public const short OPCODE_MASTER_PING_INSTANCE = 10018;
     }
 }
