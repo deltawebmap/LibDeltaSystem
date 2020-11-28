@@ -11,9 +11,9 @@ namespace LibDeltaSystem.CoreNet.NetMessages.Master
         public string domain { get; set; }
         [FormElementTypeText("Document Root", "/var/www/delta/null/", "droot")]
         public string document_root { get; set; }
-        [FormElementTypeText("Proxy Root", "/", "proot")]
+        [FormElementTypeText("First Proxy Root", "/", "proot")]
         public string proxy_root { get; set; }
-        [FormElementTypeText("Proxy Protocol", "http", "proto")]
+        [FormElementTypeText("First Proxy Protocol", "http", "proto")]
         public string proto { get; set; }
     }
 }
