@@ -126,19 +126,6 @@ namespace LibDeltaSystem.Db.System
         public string game_content_server_hostname { get; set; } = "us-01.content-prod.deltamap.net";
 
         /// <summary>
-        /// Returns the player profile by ID
-        /// </summary>
-        /// <param name="steamId"></param>
-        /// <returns></returns>
-        public async Task<DbPlayerProfile> GetPlayerProfileBySteamIDAsync(DeltaConnection conn, int? tribeId, string steamId)
-        {
-            var filterBuilder = Builders<DbPlayerProfile>.Filter;
-            var filter = filterBuilder.Eq("steam_id", steamId) & Tools.FilterBuilderToolDb.CreateTribeFilter<DbPlayerProfile>(this, tribeId);
-            var results = await conn.content_player_profiles.FindAsync(filter);
-            return await results.FirstOrDefaultAsync();
-        }
-
-        /// <summary>
         /// Checks if a user is admin on this server
         /// </summary>
         /// <param name="user"></param>
@@ -178,15 +165,15 @@ namespace LibDeltaSystem.Db.System
             return ((flags >> index) & 1U) == 1;
         }
 
+        public const int FLAG_INDEX_LOCKED = 0;
         public const int FLAG_INDEX_SETUP = 1;
 
-        /// <summary>
-        /// Reads the "requires setup" flag
-        /// </summary>
-        /// <returns></returns>
-        public bool DoesServerRequireSetup()
+        public async Task<DbPlayerProfile> GetPlayerProfileBySteamIDAsync(DeltaConnection conn, int? tribeId, string steamId)
         {
-            return CheckFlag(FLAG_INDEX_SETUP);
+            var filterBuilder = Builders<DbPlayerProfile>.Filter;
+            var filter = filterBuilder.Eq("steam_id", steamId) & Tools.FilterBuilderToolDb.CreateTribeFilter<DbPlayerProfile>(this, tribeId);
+            var results = await conn.content_player_profiles.FindAsync(filter);
+            return await results.FirstOrDefaultAsync();
         }
 
         public async Task<List<DbCanvas>> GetServerCanvases(DeltaConnection conn, int? tribe_id)
@@ -200,13 +187,6 @@ namespace LibDeltaSystem.Db.System
             var result = await conn.system_canvases.FindAsync(filter);
             List<DbCanvas> can = await result.ToListAsync();
             return can;
-        }
-
-        public async Task ExplicitUpdateAsync(DeltaConnection conn, UpdateDefinition<DbServer> update)
-        {
-            var filterBuilder = Builders<DbServer>.Filter;
-            var filter = filterBuilder.Eq("_id", _id);
-            await conn.system_servers.FindOneAndUpdateAsync(filter, update);
         }
 
         public async Task<DbPlayerProfile> GetUserPlayerProfile(DeltaConnection conn, DbUser user)
@@ -317,58 +297,6 @@ namespace LibDeltaSystem.Db.System
             return results.DeletedCount == 1;
         }
 
-        public async Task ChangeSecureMode(DeltaConnection conn, bool secure)
-        {
-            //Update
-            await ExplicitUpdateAsync(conn, Builders<DbServer>.Update.Set("secure_mode", secure).Set("last_secure_mode_toggled", DateTime.UtcNow));
-
-            //Send Events
-            conn.events.OnServerUpdated(this); //Tell users that we've changed access
-        }
-
-        public async Task ChangePermissionFlags(DeltaConnection conn, int flags)
-        {
-            //Update
-            this.permission_flags = flags;
-            await ExplicitUpdateAsync(conn, Builders<DbServer>.Update.Set("permission_flags", flags));
-
-            //Send Events
-            conn.events.OnServerUpdated(this); //Tell users that we've changed access
-        }
-
-        public async Task AddAdmin(DeltaConnection conn, DbUser user)
-        {
-            //Add
-            if (admins.Contains(user._id))
-                return;
-            admins.Add(user._id);
-
-            //Update
-            await ExplicitUpdateAsync(conn, Builders<DbServer>.Update.Set("admins", admins));
-
-            //Send Events
-            conn.events.NotifyUserGroupsUpdated(user._id); //Update permissions in the backend
-            conn.events.OnServerUpdated(this); //Inform all users that we've changed admin access
-            conn.events.OnUserServerJoined(this, user); //This just tells users that haven't already had the server listed that they can now access it
-            await conn.events.OnUserServerAccessChangedAsync(this, user); //Tell the user that access has changed
-        }
-
-        public async Task RemoveAdmin(DeltaConnection conn, DbUser user)
-        {
-            //Change admins
-            if (!admins.Contains(user._id))
-                return;
-            admins.Remove(user._id);
-            
-            //Update
-            await ExplicitUpdateAsync(conn, Builders<DbServer>.Update.Set("admins", admins));
-
-            //Send Events
-            conn.events.OnServerUpdated(this); //Inform all users that we've changed admin access
-            await conn.events.OnUserServerAccessChangedAsync(this, user); //Tell the user that access has changed
-            conn.events.NotifyUserGroupsUpdated(user._id); //Update permissions in the backend
-        }
-
         public async Task DeleteServer(DeltaConnection conn)
         {
             //Delete this
@@ -387,35 +315,9 @@ namespace LibDeltaSystem.Db.System
             //It's unimportant to notify user groups changed, as no further events will ever be sent from this server
         }
 
-        public async Task UpdateServerIconAsync(DeltaConnection conn, string url)
+        public Updaters.DbServerUpdateBuilder GetUpdateBuilder(DeltaConnection conn)
         {
-            //Update
-            await ExplicitUpdateAsync(conn, Builders<DbServer>.Update.Set("image_url", url).Set("has_custom_image", true));
-            image_url = url;
-            has_custom_image = true;
-
-            //Notify via RPC
-            conn.events.OnServerUpdated(this);
-        }
-
-        public async Task UpdateServerNameAsync(DeltaConnection conn, string name)
-        {
-            //Update
-            await ExplicitUpdateAsync(conn, Builders<DbServer>.Update.Set("display_name", name));
-            display_name = name;
-
-            //Send Event
-            conn.events.OnServerUpdated(this);
-        }
-
-        public async Task UpdateServerPermissionsTemplate(DeltaConnection conn, string name)
-        {
-            //Update
-            await ExplicitUpdateAsync(conn, Builders<DbServer>.Update.Set("permissions_template", name));
-            permissions_template = name;
-
-            //Send Event
-            conn.events.OnServerUpdated(this);
+            return new Updaters.DbServerUpdateBuilder(conn, this);
         }
     }
 }
