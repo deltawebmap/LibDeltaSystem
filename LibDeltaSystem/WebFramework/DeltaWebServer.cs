@@ -130,7 +130,7 @@ namespace LibDeltaSystem.WebFramework
         /// <returns></returns>
         private string GetExposedHeadersString()
         {
-            string h = "Authorization, X-Delta-Server-Instance-ID, X-Delta-Server-Type";
+            string h = "Authorization, X-Delta-Server-Instance-ID, X-Delta-Server-Type, Content-Type";
             foreach (var e in exposedHeaders)
                 h += ", " + e;
             return h;
