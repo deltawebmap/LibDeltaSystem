@@ -168,7 +168,7 @@ namespace LibDeltaSystem.WebFramework.WebSockets.OpcodeSock
                     error = $"Parameter '{r.key}' ({r.type.ToString()}) is required, but wasn't found.";
                     return false;
                 }
-                if(o[r.key].Type == r.type)
+                if(o[r.key].Type != r.type)
                 {
                     error = $"Parameter '{r.key}' was expected to be of type {r.type.ToString()}, but was actually {o[r.key].Type.ToString()}.";
                     return false;
