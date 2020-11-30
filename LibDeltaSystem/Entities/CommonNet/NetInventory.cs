@@ -1,4 +1,5 @@
 ﻿using LibDeltaSystem.Db.Content;
+using LibDeltaSystem.Tools.DeltaWebFormat.Attributes;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -9,18 +10,20 @@ namespace LibDeltaSystem.Entities.CommonNet
     public class NetInventory
     {
         public string holder_id { get; set; }
-        public DbInventory_InventoryType holder_type { get; set; }
+        [WebFormatAttributeUseNameTable]
+        public string holder_type { get; set; }
+        [WebFormatAttributeUseObject]
         public NetInventory_Item[] items { get; set; }
         public int tribe_id { get; set; }
 
         public class NetInventory_Item
         {
             public string item_id { get; set; }
+            [WebFormatAttributeUseNameTable]
             public string classname { get; set; }
             public float durability { get; set; }
             public int stack_size { get; set; }
             public ushort flags { get; set; }
-            public Dictionary<string, string> custom_data { get; set; }
 
             public static NetInventory_Item ConvertItem(DbInventory_InventoryItem item)
             {
@@ -30,8 +33,7 @@ namespace LibDeltaSystem.Entities.CommonNet
                     durability = item.durability,
                     item_id = item.item_id.ToString(),
                     stack_size = item.stack_size,
-                    flags = item.flags,
-                    custom_data = item.custom_data
+                    flags = item.flags
                 };
             }
         }
@@ -49,7 +51,7 @@ namespace LibDeltaSystem.Entities.CommonNet
             return new NetInventory
             {
                 holder_id = inv.holder_id.ToString(),
-                holder_type = inv.holder_type,
+                holder_type = inv.holder_type.ToString().ToUpper(),
                 items = items,
                 tribe_id = inv.tribe_id
             };

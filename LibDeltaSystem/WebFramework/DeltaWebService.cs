@@ -188,6 +188,16 @@ namespace LibDeltaSystem.WebFramework
             return int.TryParse(e.Request.Query[name], out value);
         }
 
+        public T GetEnumStringFromQuery<T>(string name, T defaultValue) where T : struct
+        {
+            T value = defaultValue;
+            if(e.Request.Query.ContainsKey(name))
+            {
+                value = Enum.Parse<T>(e.Request.Query[name]);
+            }
+            return value;
+        }
+
         public Task AwaitCancel()
         {
             //Little bit janky...
