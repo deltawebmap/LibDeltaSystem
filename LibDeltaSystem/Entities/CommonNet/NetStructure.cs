@@ -9,11 +9,11 @@ namespace LibDeltaSystem.Entities.CommonNet
     public class NetStructure
     {
         [WebFormatAttributeUseNameTable]
-        public string classname;
+        public string classname { get; set; }
         [WebFormatAttributeUseObject]
-        public DbLocation location;
-        public int structure_id;
-        public bool has_inventory;
-        public int tribe_id;
+        public DbLocation location { get; set; }
+        public int structure_id { get; set; }
+        public bool has_inventory { get; set; }
+        public int tribe_id { get; set; }
     }
 }
