@@ -15,6 +15,9 @@ namespace LibDeltaSystem.Entities.CommonNet
         [WebFormatAttributeUseObject]
         public NetInventory_Item[] items { get; set; }
         public int tribe_id { get; set; }
+        public int commit_type { get; set; }
+        [WebFormatAttributeUseNameTable]
+        public string commit_id { get; set; }
 
         public class NetInventory_Item
         {

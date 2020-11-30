@@ -41,6 +41,8 @@ namespace LibDeltaSystem.Entities.CommonNet
         public bool is_alive { get; set; }
         [WebFormatAttributeUseObject]
         public SavedDinoTribePrefs tribe_prefs { get; set; }
+        public int commit_type { get; set; }
+        public string commit_id { get; set; }
 
         public static NetDino ConvertDbDino(DbDino dino)
         {
