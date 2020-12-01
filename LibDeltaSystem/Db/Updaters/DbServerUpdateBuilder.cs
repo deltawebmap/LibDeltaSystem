@@ -132,14 +132,6 @@ namespace LibDeltaSystem.Db.Updaters
             return UpdateServerName(name);
         }
 
-        public DbServerUpdateBuilder UpdateSecureMode(bool secure)
-        {
-            context.secure_mode = secure;
-            updates.Add(Builders<DbServer>.Update.Set("secure_mode", context.secure_mode));
-            doRpcPublicServerUpdated = true;
-            return this;
-        }
-
         public DbServerUpdateBuilder UpdateLastSyncState(ObjectId state)
         {
             context.last_sync_state = state;
