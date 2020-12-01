@@ -81,11 +81,6 @@ namespace LibDeltaSystem.Db.System
         public List<ObjectId> admins { get; set; } = new List<ObjectId>();
 
         /// <summary>
-        /// In secure mode, admins cannot access other tribes data. This can help to ensure tribes that there is no admin abuse
-        /// </summary>
-        public bool secure_mode { get; set; }
-
-        /// <summary>
         /// The last time secure mode was toggled. Used to notify users if it's been changed
         /// </summary>
         public DateTime last_secure_mode_toggled { get; set; }
@@ -167,6 +162,7 @@ namespace LibDeltaSystem.Db.System
 
         public const int FLAG_INDEX_LOCKED = 0;
         public const int FLAG_INDEX_SETUP = 1;
+        public const int FLAG_INDEX_SECURE = 2;
 
         public async Task<DbPlayerProfile> GetPlayerProfileBySteamIDAsync(DeltaConnection conn, int? tribeId, string steamId)
         {

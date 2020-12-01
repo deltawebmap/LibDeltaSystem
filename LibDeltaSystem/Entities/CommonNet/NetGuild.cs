@@ -6,37 +6,31 @@ using System.Threading.Tasks;
 
 namespace LibDeltaSystem.Entities.CommonNet
 {
-    public class NetGuild
+    public class NetGuild : NetGuildSettings
     {
-        public string display_name;
-        public string image_url;
-        public string cluster_id;
+        public string icon_url;
         public string id;
         public string map_id;
-        public int permission_flags;
-        public int flags;
-        public string permissions_template;
         public string[] mods;
         public string content_server_hostname;
-
-        public bool secure_mode;
+        public bool is_unconfigured;
         public DateTime last_secure_mode_toggled;
 
         public void SetServerData(DbServer server)
         {
             //Set
-            display_name = server.display_name;
-            image_url = server.image_url;
-            cluster_id = server.cluster_id;
+            name = server.display_name;
+            icon_url = server.image_url;
             id = server.id;
             map_id = server.latest_server_map;
-            secure_mode = server.secure_mode;
             last_secure_mode_toggled = server.last_secure_mode_toggled;
             permission_flags = server.permission_flags;
-            flags = server.flags;
             permissions_template = server.permissions_template;
             mods = server.mods;
             content_server_hostname = server.game_content_server_hostname;
+            is_locked = server.CheckFlag(DbServer.FLAG_INDEX_LOCKED);
+            is_unconfigured = server.CheckFlag(DbServer.FLAG_INDEX_SETUP);
+            is_secure = server.CheckFlag(DbServer.FLAG_INDEX_SECURE);
         }
 
         public static NetGuildUser GetGuild(DbServer server)
