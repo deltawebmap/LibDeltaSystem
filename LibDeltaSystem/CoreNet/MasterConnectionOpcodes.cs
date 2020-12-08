@@ -25,5 +25,6 @@ namespace LibDeltaSystem.CoreNet
         public const short OPCODE_MASTER_GETUSERCFG = 10016;
         public const short OPCODE_MASTER_REBOOT_INSTANCE = 10017;
         public const short OPCODE_MASTER_PING_INSTANCE = 10018;
+        public const short OPCODE_MASTER_INSTANCE_LOG = 10019;
     }
 }
